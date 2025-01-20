@@ -1,0 +1,13 @@
+{
+    "_version":1,
+    "id":"ec25d50f-e16c-40ec-9666-a9b95afe5723",
+    "meta":
+    {
+      "_type_":"MetaTileSet",
+      "bitmapId":"a1ec419e-c4c3-4e1f-80d7-8f5d751b274c",
+      "width":5,
+      "height":3,
+      "characters":"1F8B080000000000001363646266606008F504125EDE0C0C1659A959A9F97EBE7EBEE540EC0700E0BB75A21E000000",
+      "colors":"1F8B08000000000000136360C00700B53E04001E000000"
+    }
+  }
