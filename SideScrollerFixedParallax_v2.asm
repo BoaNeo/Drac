@@ -21,10 +21,6 @@ _sprAnimDracAppear:
 _sprAnimDracFalling:
 .import binary "data/Dracula_falling.anim"
 
-*=$1f00 "Active Sprites"
-_sprites:
-.fill SPR_SIZE*8, 0
-
 *=$2000 "Map"
 .var map = LoadBinary("data/test.map");
 .var line = map.getSize()/5;
@@ -159,7 +155,7 @@ start:  sei
         sta $d019 
         cli
 
-        SprManagerInit($00,$09,$c0)
+        SprManagerInit($00,$09,$c0,$ff)
 
         SprSetHandler(0, PlayerControl)
 
@@ -428,6 +424,8 @@ DrawMap7:
 
 .macro SwapToBuffer1()
 {
+	SprSetScreenPt(_screen1,_screen2)
+
 	lda #SCREEN1_BITS
 	sta _screenBits
 	jsr NextColumn
@@ -435,6 +433,8 @@ DrawMap7:
 
 .macro SwapToBuffer2()
 {
+	SprSetScreenPt(_screen2,_screen1)
+
 	lda #SCREEN2_BITS
 	sta _screenBits
 	jsr NextColumn

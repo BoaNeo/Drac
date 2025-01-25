@@ -10,9 +10,12 @@
 .const SPR_HandlerHi = 9
 .const SPR_AnimEndLo = 10
 .const SPR_AnimEndHi = 11
+.const SPR_CharAbove = 12
+.const SPR_CharAt = 13
+.const SPR_CharBelow = 14
 //.const SPR_Color = 10
 //.const SPR_Pt = 11
-.const SPR_SIZE = 12
+.const SPR_SIZE = 15
 
 .const SPR_COUNT = 1
 
@@ -22,10 +25,19 @@
 .const SPRBIT_Multicolor = $08
 .const SPRBIT_BehindBackground = $10
 .const SPRBIT_Ghost = $20
-.const SPRBIT_Collided = $40
-.const SPRBIT_Grounded = $80
 
-.macro SprManagerInit(color0, color1, base_index)
+.const VIS_TOP = 50
+.const VIS_BOTTOM = VIS_TOP + 8*25 - 21
+.const VIS_LEFT = 24 / 2
+.const VIS_RIGHT = (24 + 40*8 - 24) / 2
+
+_sprites:
+.fill SPR_SIZE*8, 0
+_sprBaseIndex: .byte 0
+_sprScreenHi: .byte $04
+_sprOffscreenChar: .byte $ff
+
+.macro SprManagerInit(color0, color1, base_index, off_screen_char)
 {
 	lda #color0
 	sta $d025 // Spr color M1
@@ -36,6 +48,8 @@
 	sta $d01c
 	lda #base_index
 	sta _sprBaseIndex
+	lda #off_screen_char
+	sta _sprOffscreenChar
 }
 
 .macro SprSetHandler(spr, handler)
@@ -145,6 +159,15 @@ ok:		SprSTA(SPR_X)
 ok:		SprSTA(SPR_X)
 }
 
+.macro SprSetScreenPt(screen1,screen2)
+{
+		lda #>screen1
+		sta _sprScreenHi
+		lda #(>screen1)+3
+		sta @_sprPointerHi1+1
+		lda #(>screen2)+3
+		sta @_sprPointerHi2+1
+}
 
 SprUpdate:
 {
@@ -209,63 +232,66 @@ _SprToBackCollision:
 		rts
 solid:
 		SprLDA(SPR_Y)
-		cmp #21
+		cmp #VIS_TOP-9
 		bcc exit
-		cmp #221
+		cmp #VIS_BOTTOM-21
 		bcs exit
-		tax // Store y-coord in x (because I need y for zero-page indexing in X direction)
+		tax // Store y-coord in x reg (because I need y for zero-page indexing in X direction)
+
 		// We're in the relevant screen area between line 21 and 221
 		SprLDAsafe(SPR_X)
-		cmp #8
+		cmp #VIS_LEFT
 		bcc exit
-		cmp #168
+		cmp #VIS_RIGHT
 		bcs exit
 		// And row 8 to 168 (x position is double pixels)
 		// Convert x pixels to column by subtracting the min value and dividing by 4
-		clc
-		sbc #8
+		sbc #VIS_LEFT - 12/2 // Left edge minus half a sprite width (in double-width coords)
 		lsr
 		lsr
-		tay // Store x-coord in y
+		tay // Store x-coord in y register
 		// Convert y pixels to row by subtracting the min value and dividing by 8
 		txa
-		clc
-		sbc #21
+		sbc #VIS_TOP-9 // Fist "fully visible " position where sprite bottom is aligned with a row is 53, +/- half a character yields [49;57[, i.e. VIS_TOP-1 to VIS_TOP+7 
 		lsr
 		lsr
 		lsr
 		tax
 		// Calculate screen position
-		lda #>(_screen1-40)
+		lda _sprScreenHi
 		sta $ff
-		lda #<(_screen1-40)
+		lda #0
+		cpx #0
+		beq noloop
 loop:	clc
 		adc #40
-		bcc nohi
+		bcc !nohi+
 		inc $ff
-nohi:	dex
+!nohi:	dex
 		bne loop
-		sta $fe
-		// Get the relevant character
-		lda ($fe),y
-		and #$f0 // First 16 characters are "ground"
-		bne exit
-		SprLDA(SPR_Y)
-		sec
-		sbc #21
-		and #$f8
+noloop: sta $fe
+		// Safe X-COORD
 		clc
-		adc #21
-		SprSTA(SPR_Y)
-
-		SprLDA(SPR_Bits)
-		ora #SPRBIT_Grounded
-		SprSTA(SPR_Bits)
+		sty $d6
+		// Get the relevant character
+//		lda ($fe),y
+//		SprSTA(SPR_CharAbove)
+//		lda $d6
+//		adc #80
+//		tay
+		lda ($fe),y
+		SprSTA(SPR_CharAt)
+		lda $d6
+		adc #80
+		tay
+		lda ($fe),y
+		SprSTA(SPR_CharBelow)
 		rts
-exit:
-		SprLDA(SPR_Bits)
-		and #~SPRBIT_Grounded
-		SprSTA(SPR_Bits)
+exit:	lda _sprOffscreenChar
+		SprSTA(SPR_CharAbove)
+		SprSTA(SPR_CharAt)
+		SprSTA(SPR_CharBelow)
+		//.break
 		rts
 }
 
@@ -326,8 +352,9 @@ no_reset:
 		ldy $fb
 		sta $d027,y
 		txa
-		sta _screen1+$3f8,y
-		sta _screen2+$3f8,y
+		sta @_sprPointerHi1:$07f8,y
+		sta @_sprPointerHi2:$07f8,y
+
 		rts
 no_anim:
 		SprSTA(SPR_AnimDelay)
@@ -338,16 +365,16 @@ _SprSetPosition:
 {
 		lda $fb // Current sprite index
 		asl
-		tay
+		tax
 
-		SprLDAsafe(SPR_X)
+		SprLDA(SPR_X)
 		clc
 		rol
-		sta $d000,y // spr x lo
+		sta $d000,x // spr x lo
 		BitSetFromCarry($d010) // spr x hi
 
-		SprLDAsafe(SPR_Y)
-		sta $d001,y // spr y
+		SprLDA(SPR_Y)
+		sta $d001,x // spr y
 
 		rts
 }
@@ -356,24 +383,23 @@ _bits: .byte $01, $02, $04, $08, $10, $20, $40, $80
 _bitMasks: .byte ~$01, ~$02, ~$04, ~$08, ~$10, ~$20, ~$40, ~$80
 
 
-// Y->: The index of the bit to set
+// X->: The index of the bit to set
 // ->C: The CARRY will contain the value of the specified bit
 .macro BitGetInCarry(source)
 {
 		lda source
-		and _bitMasks,y
-		cmp _bits,y
+		and _bitMasks,x
+		cmp _bits,x
 }
 
-// Y->: The index of the bit to set
+// X->: The index of the bit to set
 // C->: The value of the bit
 .macro BitSetFromCarry(target)
 {
 		lda target
-		and _bitMasks,y
+		and _bitMasks,x
 		bcc no_set
-		ora _bits,y
+		ora _bits,x
 no_set:	sta target
 }
 
-_sprBaseIndex: .byte 0

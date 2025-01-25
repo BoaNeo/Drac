@@ -2,7 +2,6 @@ _state: .word PLY_Spawn
 
 PlayerControl:
 {
-		SprMoveDown(1)
 		jmp (_state)
 }
 
@@ -21,18 +20,31 @@ PLY_Spawn:
 	    lda #80
 	    SprSTA(SPR_Y)
 
-		SprSetAnimation(_sprAnimDracRun, 0)
-	//    SprSetFlags(SPRBIT_Enabled)
+	    SprSetFlags(SPRBIT_Ghost)
 
-		PlySetState(PLY_Run)
+		SprSetAnimation(_sprAnimDracRun, PLY_EOA_Spawn)
+		PlySetState(PLY_Spawning)
+		rts
+}
+
+PLY_Spawning:
+{
 		rts
 }
 
 PLY_Run:
 {
-		SprLDA(SPR_Bits)
-		and #SPRBIT_Grounded
-		bne gnd
+		SprLDA(SPR_CharAt)
+		and #$f0
+		bne alive
+
+		SprSetAnimation(_sprAnimDracDie, PLY_EOA_Death)
+		PlySetState(PLY_Dead)
+		rts
+
+alive:	SprLDA(SPR_CharBelow)
+		and #$f0 // First 16 characters are "ground"
+		beq gnd
 
 		SprSetAnimation(_sprAnimDracFalling, 0)
 		PlySetState(PLY_Falling)
@@ -66,15 +78,31 @@ PLY_Run:
 
 PLY_Falling:
 {
-		SprLDA(SPR_Bits)
-		and #SPRBIT_Grounded
-		beq falling
+		SprLDA(SPR_CharAt)
+		and #$f0
+		bne alive
+
+		SprSetAnimation(_sprAnimDracDie, PLY_EOA_Death)
+		PlySetState(PLY_Dead)
+		rts
+
+alive:	SprLDA(SPR_CharBelow)
+		and #$f0 // First 16 characters are "ground"
+		bne falling
+
+//		SprSnapY()
+		SprLDA(SPR_Y)
+		and #$f8
+		clc
+		adc #2+3 // Because we snap to an even byte and row zero is at 50, so we're already 2 pixels up, the sprite is 21, adding additional 3 pixels to reach an even byte
+		SprSTA(SPR_Y)
 
 		SprSetAnimation(_sprAnimDracRun, 0)
 		PlySetState(PLY_Run)
 		rts
 
 	falling:
+		SprMoveDown(1)
 
 		lda $dc00
 		ror
@@ -94,32 +122,56 @@ PLY_Falling:
 
 PLY_TeleportUp:
 {
-		SprMoveUp(1)
 		rts
 }
 
 PLY_TeleportDown:
 {
-		SprMoveDown(1)
 		rts
 }
 
 PLY_Appear:
 {
+		rts
+}
+
+PLY_Dead:
+{
+		SprMoveLeft(1)
+		SprLDA(SPR_CharBelow)
+		and #$f0 // First 16 characters are "ground"
+		bne falling
+
+		SprLDA(SPR_Y)
+		and #$f8
+		clc
+		adc #2+3 // Because we snap to an even byte and row zero is at 50, so we're already 2 pixels up, the sprite is 21, adding additional 3 pixels to reach an even byte
+		SprSTA(SPR_Y)
+		rts
+
+	falling:
 		SprMoveDown(1)
 		rts
 }
 
-
-PLY_Dead:
+PLY_EOA_Spawn:
 {
-		SprMoveLeft(2)
+	    SprClearFlags(SPRBIT_Ghost)
+		SprSetAnimation(_sprAnimDracRun, 0)
+		PlySetState(PLY_Run)
+		rts
+}
+
+PLY_EOA_Death:
+{
+		SprSetAnimation(_sprAnimDracAppear, 0)
+		PlySetState(PLY_Spawn)
 		rts
 }
 
 PLY_EOA_ReappearUp:
 {
-		SprMoveUp($50)
+		SprMoveUp($48)
 		SprSetAnimation(_sprAnimDracAppear, PLY_EOA_StartRun)
 		PlySetState(PLY_Appear)
 		rts
@@ -127,7 +179,7 @@ PLY_EOA_ReappearUp:
 
 PLY_EOA_ReappearDown:
 {
-		SprMoveDown($40)
+		SprMoveDown($38)
 		SprSetAnimation(_sprAnimDracAppear, PLY_EOA_StartRun)
 		PlySetState(PLY_Appear)
 		rts
