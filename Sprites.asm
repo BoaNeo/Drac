@@ -10,12 +10,9 @@
 .const SPR_HandlerHi = 9
 .const SPR_AnimEndLo = 10
 .const SPR_AnimEndHi = 11
-.const SPR_CharAbove = 12
-.const SPR_CharAt = 13
-.const SPR_CharBelow = 14
-//.const SPR_Color = 10
-//.const SPR_Pt = 11
-.const SPR_SIZE = 15
+.const SPR_CharAt = 12
+.const SPR_CharBelow = 13
+.const SPR_SIZE = 14
 
 .const SPR_COUNT = 1
 
@@ -36,6 +33,16 @@ _sprites:
 _sprBaseIndex: .byte 0
 _sprScreenHi: .byte $04
 _sprOffscreenChar: .byte $ff
+_screenRowOffsetLo:
+.for(var i=0;i<25;i++)
+{
+	.byte <(i*40)
+}
+_screenRowOffsetHi:
+.for(var i=0;i<25;i++)
+{
+	.byte >(i*40)
+}
 
 .macro SprManagerInit(color0, color1, base_index, off_screen_char)
 {
@@ -192,24 +199,6 @@ SprUpdate:
 		adc #SPR_SIZE
 		sta $fc
 	}
-/*
-	lda #0
-	.for(var spr=0;spr<SPR_COUNT;spr++)
-	{
-		SprLDAsafe(SPR_Bits)
-		ror
-		BitSetFromCarry($d015) // Enable spr
-		ror
-		BitSetFromCarry($d017) // Spr double height
-		ror
-		BitSetFromCarry($d01d) // Spr double width
-		ror
-		BitSetFromCarry($d01c) // Spr multicolor
-		ror
-		BitSetFromCarry($d01b) // Spr priority bit (1=behind background)
-
-	}
-	*/
 	rts
 }
 
@@ -228,57 +217,46 @@ _SprToBackCollision:
 {
 		SprLDA(SPR_Bits)
 		and #SPRBIT_Ghost
-		beq solid
-		rts
-solid:
+		bne exit
+
 		SprLDA(SPR_Y)
 		cmp #VIS_TOP-9
 		bcc exit
 		cmp #VIS_BOTTOM-21
 		bcs exit
+		// Convert y pixels to row by subtracting the min value and dividing by 8
+		sbc #VIS_TOP-9 // Fist "fully visible " position where sprite bottom is aligned with a row is 53, +/- half a character yields [49;57[, i.e. VIS_TOP-1 to VIS_TOP+7 
+		lsr
+		lsr
+		lsr
 		tax // Store y-coord in x reg (because I need y for zero-page indexing in X direction)
 
-		// We're in the relevant screen area between line 21 and 221
-		SprLDAsafe(SPR_X)
+		SprLDA(SPR_X)
 		cmp #VIS_LEFT
 		bcc exit
 		cmp #VIS_RIGHT
 		bcs exit
-		// And row 8 to 168 (x position is double pixels)
 		// Convert x pixels to column by subtracting the min value and dividing by 4
 		sbc #VIS_LEFT - 12/2 // Left edge minus half a sprite width (in double-width coords)
 		lsr
 		lsr
 		tay // Store x-coord in y register
-		// Convert y pixels to row by subtracting the min value and dividing by 8
-		txa
-		sbc #VIS_TOP-9 // Fist "fully visible " position where sprite bottom is aligned with a row is 53, +/- half a character yields [49;57[, i.e. VIS_TOP-1 to VIS_TOP+7 
-		lsr
-		lsr
-		lsr
-		tax
-		// Calculate screen position
+
+		// We're in the relevant screen area between line 21 and 221
+		// And row 8 to 168 (x position is double pixels)
+
+		// Calculate screen row
 		lda _sprScreenHi
+		clc
+		adc _screenRowOffsetHi,x
 		sta $ff
-		lda #0
-		cpx #0
-		beq noloop
-loop:	clc
-		adc #40
-		bcc !nohi+
-		inc $ff
-!nohi:	dex
-		bne loop
-noloop: sta $fe
+		lda _screenRowOffsetLo,x
+		sta $fe
+
 		// Safe X-COORD
 		clc
 		sty $d6
-		// Get the relevant character
-//		lda ($fe),y
-//		SprSTA(SPR_CharAbove)
-//		lda $d6
-//		adc #80
-//		tay
+		// Get the relevant characters behind and below the sprite
 		lda ($fe),y
 		SprSTA(SPR_CharAt)
 		lda $d6
@@ -288,10 +266,8 @@ noloop: sta $fe
 		SprSTA(SPR_CharBelow)
 		rts
 exit:	lda _sprOffscreenChar
-		SprSTA(SPR_CharAbove)
 		SprSTA(SPR_CharAt)
 		SprSTA(SPR_CharBelow)
-		//.break
 		rts
 }
 
@@ -377,6 +353,25 @@ _SprSetPosition:
 		sta $d001,x // spr y
 
 		rts
+
+/*
+	lda #0
+	.for(var spr=0;spr<SPR_COUNT;spr++)
+	{
+		SprLDAsafe(SPR_Bits)
+		ror
+		BitSetFromCarry($d015) // Enable spr
+		ror
+		BitSetFromCarry($d017) // Spr double height
+		ror
+		BitSetFromCarry($d01d) // Spr double width
+		ror
+		BitSetFromCarry($d01c) // Spr multicolor
+		ror
+		BitSetFromCarry($d01b) // Spr priority bit (1=behind background)
+
+	}
+	*/
 }
 
 _bits: .byte $01, $02, $04, $08, $10, $20, $40, $80
