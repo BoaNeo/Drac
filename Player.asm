@@ -54,12 +54,14 @@ alive:	SprLDA(SPR_CharBelow)
 		lda $dc00
 		ror
 		bcs no_up
+	    SprSetFlags(SPRBIT_Ghost)
 		SprSetAnimation(_sprAnimDracVanish, PLY_EOA_ReappearUp)
 		PlySetState(PLY_TeleportUp)
 		jmp PLY_TeleportUp
 	no_up:
 		ror
 		bcs no_down
+	    SprSetFlags(SPRBIT_Ghost)
 		SprSetAnimation(_sprAnimDracVanish, PLY_EOA_ReappearDown)
 		PlySetState(PLY_TeleportDown)
 		jmp PLY_TeleportDown
@@ -172,6 +174,7 @@ PLY_EOA_Death:
 PLY_EOA_ReappearUp:
 {
 		SprMoveUp($48)
+		SprClearFlags(SPRBIT_Ghost)
 		SprSetAnimation(_sprAnimDracAppear, PLY_EOA_StartRun)
 		PlySetState(PLY_Appear)
 		rts
@@ -180,6 +183,7 @@ PLY_EOA_ReappearUp:
 PLY_EOA_ReappearDown:
 {
 		SprMoveDown($38)
+		SprClearFlags(SPRBIT_Ghost)
 		SprSetAnimation(_sprAnimDracAppear, PLY_EOA_StartRun)
 		PlySetState(PLY_Appear)
 		rts
