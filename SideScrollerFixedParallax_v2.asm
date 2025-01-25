@@ -5,11 +5,10 @@ BasicUpstart2(start)
 #import "Mem.asm"
 #import "Math.asm"
 
-* = $1000 "Sprite Code"
+* = $1000 "Sprites.asm"
 #import "Sprites.asm"
 
-*=$1e00 "Sprite Animations"
-_spriteAnimations:
+* = * "Sprite Animations"
 _sprAnimDracRun:
 .import binary "data/Dracula_run.anim"
 _sprAnimDracDie:
@@ -276,22 +275,24 @@ DrawMap0:
 
 DrawMap1:
 	ScrollX(4,FONT4_BITS)
-	ShiftBuffers(_screen1, _screen2, _color1, _color2, 0, 8)
+	ShiftBuffers(_screen1, _screen2, _color1, _color2, 0, 7)
 	rts
 
 DrawMap2:
 	ScrollX(2,FONT6_BITS)
-	ShiftBuffers(_screen1, _screen2, _color1, _color2, 8, 8)
+	ShiftBuffers(_screen1, _screen2, _color1, _color2, 7, 7)
 	rts
 
 DrawMap3:
 	ScrollX(0,FONT0_BITS)
-	ShiftBuffers(_screen1, _screen2, _color1, _color2, 16, 4)
+	ShiftBuffers(_screen1, _screen2, _color1, _color2, 14, 6)
+	SetBorderColor(11)
 	FillEdge(_map0, 0, _screen2, _color2)
 	FillEdge(_map1, 4, _screen2, _color2)
 	FillEdge(_map2, 8, _screen2, _color2)
 	FillEdge(_map3, 12, _screen2, _color2)
 	FillEdge(_map4, 16, _screen2, _color2)
+	SetBorderColor(12)
 	SwapToBuffer2()
 	rts
 
@@ -302,22 +303,24 @@ DrawMap4:
 
 DrawMap5:
 	ScrollX(4,FONT4_BITS)
-	ShiftBuffers(_screen2, _screen1, _color2, _color1, 0, 8)
+	ShiftBuffers(_screen2, _screen1, _color2, _color1, 0, 7)
 	rts
 
 DrawMap6:
 	ScrollX(2,FONT6_BITS)
-	ShiftBuffers(_screen2, _screen1, _color2, _color1, 8, 8)
+	ShiftBuffers(_screen2, _screen1, _color2, _color1, 7, 7)
 	rts
 
 DrawMap7:
 	ScrollX(0,FONT0_BITS)
-	ShiftBuffers(_screen2, _screen1, _color2, _color1, 16, 4)
+	ShiftBuffers(_screen2, _screen1, _color2, _color1, 14, 6)
+	SetBorderColor(11)
 	FillEdge(_map0, 0, _screen1, _color1)
 	FillEdge(_map1, 4, _screen1, _color1)
 	FillEdge(_map2, 8, _screen1, _color1)
 	FillEdge(_map3, 12, _screen1, _color1)
 	FillEdge(_map4, 16, _screen1, _color1)
+	SetBorderColor(12)
 	SwapToBuffer1()
 	rts
 

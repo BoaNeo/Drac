@@ -29,21 +29,33 @@
 .const VIS_RIGHT = (24 + 40*8 - 24) / 2
 
 _sprites:
-.fill SPR_SIZE*8, 0
+.align $100
+* = * "Sprite Properties"
+.fill SPR_SIZE*SPR_COUNT, 0
 _sprBaseIndex: .byte 0
 _sprScreenHi: .byte $04
 _sprOffscreenChar: .byte $ff
+
+.align $100
+* = * "Sprite Row to Character Map"
 _screenRowOffsetLo:
-.for(var i=0;i<25;i++)
+.for(var i=0;i<256;i++)
 {
-	.byte <(i*40)
+	.var row = (i-(VIS_TOP-9)) >> 3
+	.if(row<0) { .byte 0 }
+	else .if(row>24) { .byte <(24*40) }
+	else .byte <(row*40)
 }
 _screenRowOffsetHi:
-.for(var i=0;i<25;i++)
+.for(var i=0;i<256;i++)
 {
-	.byte >(i*40)
+	.var row = (i-(VIS_TOP-9)) >> 3
+	.if(row<0) { .byte 0 }
+	else .if(row>24) { .byte >(24*40) }
+	else .byte >(row*40)
 }
 
+* = * "Sprite Code"
 .macro SprManagerInit(color0, color1, base_index, off_screen_char)
 {
 	lda #color0
@@ -220,15 +232,6 @@ _SprToBackCollision:
 		bne exit
 
 		SprLDA(SPR_Y)
-		cmp #VIS_TOP-9
-		bcc exit
-		cmp #VIS_BOTTOM-21
-		bcs exit
-		// Convert y pixels to row by subtracting the min value and dividing by 8
-		sbc #VIS_TOP-9 // Fist "fully visible " position where sprite bottom is aligned with a row is 53, +/- half a character yields [49;57[, i.e. VIS_TOP-1 to VIS_TOP+7 
-		lsr
-		lsr
-		lsr
 		tax // Store y-coord in x reg (because I need y for zero-page indexing in X direction)
 
 		SprLDA(SPR_X)
@@ -373,6 +376,8 @@ _SprSetPosition:
 	}
 	*/
 }
+
+* = * "Bit"
 
 _bits: .byte $01, $02, $04, $08, $10, $20, $40, $80
 _bitMasks: .byte ~$01, ~$02, ~$04, ~$08, ~$10, ~$20, ~$40, ~$80
