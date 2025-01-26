@@ -32,6 +32,7 @@ _sprites:
 .align $100
 * = * "Sprite Properties"
 .fill SPR_SIZE*SPR_COUNT, 0
+_sprOffset: .lohifill SPR_COUNT, _sprites+SPR_SIZE*i
 _sprBaseIndex: .byte 0
 _sprScreenHi: .byte $04
 _sprOffscreenChar: .byte $ff
@@ -56,19 +57,29 @@ _screenRowOffsetHi:
 }
 
 * = * "Sprite Code"
-.macro SprManagerInit(color0, color1, base_index, off_screen_char)
+
+// When the sprite collision handler is called:
+// $fb is current sprite index
+// ($fc) points to current sprite properties
+// $f2 is other sprite index
+// ($22) points to other sprite properties
+.macro SprManagerInit(color0, color1, base_index, off_screen_char, handler)
 {
 	lda #color0
 	sta $d025 // Spr color M1
 	lda #color1
 	sta $d026 // Spr color M2
-	lda #$ff
-	sta $d015
+	lda $d01e // Clear sprite collision (first read)
+	lda #$ff // Sprites in multicolor
 	sta $d01c
 	lda #base_index
 	sta _sprBaseIndex
 	lda #off_screen_char
 	sta _sprOffscreenChar
+	lda #<handler
+	sta @_collisionHandler
+	lda #>handler
+	sta @_collisionHandler+1
 }
 
 .macro SprSetHandler(spr, handler)
@@ -208,47 +219,139 @@ ok:		SprSTA(SPR_X)
 
 SprUpdate:
 {
-	// Spr index
-	lda #0
-	sta $fb 
-	// Spr data pt
-	lda #<_sprites
-	sta $fc 
-	lda #>_sprites
-	sta $fd
+	// Get collision bits for this frame
+	lda $d01e
+	sta $26
+	// Clear active sprites
+	lda #$00
+	sta $27
+
 	// Iterate all sprites
 	.for(var spr=0;spr<SPR_COUNT;spr++)
 	{
-		jsr _SprHandler
+		// Set spr index
+		ldx #spr
+		stx $fb
+		// Set spr data pt
+		lda _sprOffset,x
+		sta $fc
+		lda _sprOffset+SPR_COUNT,x
+		sta $fd
+
+		SprLDA(SPR_HandlerHi)
+		beq no_handler
+		sta handler+2
+		SprLDA(SPR_HandlerLo)
+		sta handler+1
+	handler:
+		jsr $ffff
+
+		SprLDA(SPR_Bits)
+		and #SPRBIT_Ghost
+		bne ghost
+
 		jsr _SprToBackCollision
+		lda #1<<spr
+		jsr _SprToSprCollision
+	ghost:
 		jsr _SprAnimateSingle
 		jsr _SprSetPosition
-		inc $fb
-		lda $fc
-		clc
-		adc #SPR_SIZE
-		sta $fc
+		lda #1<<spr
+		ora $27
+		sta $27
+	no_handler:
 	}
+
+	// Clear collision bits for this frame
+	lda #0
+	sta $d01e
+//	lda $27
+//	sta $d015
 	rts
 }
 
-_SprHandler:
+_SprToSprCollision:
 {
-			SprLDA(SPR_HandlerHi)
-			beq no_handler
-			sta handler+2
-			SprLDA(SPR_HandlerLo)
-			sta handler+1
-handler: 	jmp $ffff
-no_handler: rts
+		sta $d6 // Collision mask of potential collision in $d6 (starting with self)
+		and $26
+		bne coll
+		rts
+coll:	.break
+		lda $fb // Get index of current sprite
+		sta $f2
+next:	inc $f2 // Spr index of potential collision
+		lda $d6
+		asl
+		beq exit // No more bits to check
+		sta $d6
+		and $26
+		beq next // No collision here, try next
+
+		ldx $f2
+		// Set spr data pt
+		lda _sprOffset,x
+		sta $22
+		lda _sprOffset+SPR_COUNT,x
+		sta $23
+
+		// Potential collision between sprite with index $fb (current) and index $f2, check AABB
+		// First check if this other sprite is "active" (I.e. has a non-null handler) 
+//		ldy #SPR_HandlerHi
+//		lda ($22),y
+//		beq next
+		ldy #SPR_Bits
+		lda ($22),y
+		and #SPRBIT_Ghost
+		bne next
+
+		// Then check for X overlap		
+		SprLDA(SPR_X)
+		sta $24
+//		ldy #SPR_X
+		lda ($22),y
+		sta $25
+		clc
+		adc #12
+		cmp $24
+		bcc next
+		lda $24
+		clc
+		adc #12
+		cmp $25
+		bcc next
+
+		// And Y overlap		
+		SprLDA(SPR_Y)
+		sta $24
+//		ldy #SPR_X
+		lda ($22),y
+		sta $25
+		clc
+		adc #12
+		cmp $24
+		bcc next
+		lda $24
+		clc
+		adc #12
+		cmp $25
+		bcc next
+
+//		lda #13
+//		ldx $fb
+//		sta $d027,x
+//		ldx $f2
+//		sta $d027,x
+
+		jsr @_collisionHandler: exit
+
+		jmp next
+exit:
+		rts
+
 }
 
 _SprToBackCollision:
 {
-		SprLDA(SPR_Bits)
-		and #SPRBIT_Ghost
-		bne exit
-
 		SprLDA(SPR_Y)
 		tax // Store y-coord in x reg (because I need y for zero-page indexing in X direction)
 

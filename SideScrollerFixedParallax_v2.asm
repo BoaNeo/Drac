@@ -160,7 +160,7 @@ start:  sei
         sta $d019 
         cli
 
-        SprManagerInit($00,$09,$c0,$ff)
+        SprManagerInit($00,$09,$c0,$ff,OnSprCollision)
 
         SprSetHandler(SPR_Player, PlySpawn)
         SprSetHandler(SPR_Coin, CoinSpawn)
@@ -200,8 +200,10 @@ irq1:
 
 irq2:
         SetBorderColor(2)
-		lda #$ff // Turn sprites on again
+
+		lda $27 // Turn sprites on again ($27 holds active sprite mask from SprUpdate)
 		sta $d015
+
 		lda $d018
 		and #$80
 		ora _screenBits
@@ -475,8 +477,33 @@ _fontBits: .byte FONT0_BITS
 _tileOffset: .byte 0
 _tileIndex: .byte 0
 
+_coins: .byte 0
+
 #import "Player.asm"
 #import "Coin.asm"
+
+// When the sprite collision handler is called:
+// $fb is current sprite index
+// ($fc) points to current sprite properties
+// $f2 is other sprite index
+// ($22) points to other sprite properties
+OnSprCollision:
+{
+		lda $fb
+		cmp #SPR_Player
+		bne exit
+
+		lda $f2
+		cmp #SPR_Coin
+		bne exit
+
+		SprSetHandler(SPR_Coin, CoinPick)
+		inc _coins
+
+	exit:
+		rts
+
+}
 
 //----------------------------------------------------------
 //        *=$1000 "Music"

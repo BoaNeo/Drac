@@ -46,12 +46,19 @@ CoinSpinning:
 {
 	SprSBC(SPR_X, 1)
 	cmp #$f0
-	bcc go
+	bcc on_screen
 
 	SprSetAnimation(_sprAnimEmpty, 0)
 	SprSetHandler(SPR_Coin, CoinSpawn)
+on_screen:
+	rts
+}
 
-go:	rts
+CoinPick:
+{
+	SprSetAnimation(_sprAnimEmpty, 0)
+	SprSetHandler(SPR_Coin, CoinSpawn)
+	rts
 }
 
 CoinEOA_Spawn:
