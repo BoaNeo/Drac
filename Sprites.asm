@@ -14,7 +14,7 @@
 .const SPR_CharBelow = 13
 .const SPR_SIZE = 14
 
-.const SPR_COUNT = 1
+.const SPR_COUNT = 2
 
 .const SPRBIT_Enabled = $01
 .const SPRBIT_ExtendX = $02
@@ -103,6 +103,24 @@ _screenRowOffsetHi:
 	sty $d6
 	SprSTA(prop)
 	ldy $d6
+}
+
+.macro SprADC(prop, val)
+{
+	ldy #prop
+	lda ($fc),y
+	clc
+	adc #val
+	sta ($fc),y
+}
+
+.macro SprSBC(prop, val)
+{
+	ldy #prop
+	lda ($fc),y
+	sec
+	sbc #val
+	sta ($fc),y
 }
 
 .macro SprSetAnimation(anim, eoa_handler)
@@ -284,11 +302,9 @@ _SprAnimateSingle:
 
 		// Then we check the frame-repeat count - if it has not reached the limit, just exit
 		SprLDA(SPR_AnimDelay)
-		clc
-		adc #1
 		ldy #$00 // Index 0 in animation is the framerate (# of frames each image is repeated)
 		cmp ($fe),y
-		bne no_anim
+		bcc no_anim
 
 		// Reset frame delay
 		lda #$00
@@ -296,10 +312,9 @@ _SprAnimateSingle:
 
 		// Then get the frame index
 		SprLDA(SPR_Frame)
-
 		ldy #$01 // Index 1 in animation is the anim length
 		cmp ($fe),y
-		bne no_reset
+		bcc no_reset
 
 		// Trigger end-of-frame handler if any
 		SprLDA(SPR_AnimEndHi)
@@ -336,21 +351,28 @@ no_reset:
 
 		rts
 no_anim:
+		clc
+		adc #1
 		SprSTA(SPR_AnimDelay)
 		rts
 }
 
 _SprSetPosition:
 {
-		lda $fb // Current sprite index
-		asl
-		tax
-
 		SprLDA(SPR_X)
 		clc
 		rol
-		sta $d000,x // spr x lo
+		tay
+
+		ldx $fb // Current sprite index
 		BitSetFromCarry($d010) // spr x hi
+		
+		lda $fb // Current sprite index
+		asl
+		tax
+		tya
+
+		sta $d000,x // spr x lo
 
 		SprLDA(SPR_Y)
 		sta $d001,x // spr y

@@ -5,20 +5,26 @@ BasicUpstart2(start)
 #import "Mem.asm"
 #import "Math.asm"
 
+.const SPR_Player = 0
+.const SPR_Coin = 1
+
 * = $1000 "Sprites.asm"
 #import "Sprites.asm"
 
 * = * "Sprite Animations"
-_sprAnimDracRun:
-.import binary "data/Dracula_run.anim"
-_sprAnimDracDie:
-.import binary "data/Dracula_death.anim"
-_sprAnimDracVanish:
-.import binary "data/Dracula_vanish.anim"
-_sprAnimDracAppear:
-.import binary "data/Dracula_appear.anim"
-_sprAnimDracFalling:
-.import binary "data/Dracula_falling.anim"
+_sprAnimEmpty: 			.import binary "data/Sprites_empty.anim"
+
+_sprAnimDracRun: 		.import binary "data/Sprites_run.anim"
+_sprAnimDracDie: 		.import binary "data/Sprites_death.anim"
+_sprAnimDracVanish: 	.import binary "data/Sprites_vanish.anim"
+_sprAnimDracAppear: 	.import binary "data/Sprites_appear.anim"
+_sprAnimDracFalling: 	.import binary "data/Sprites_falling.anim"
+_sprAnimDracToBat: 		.import binary "data/Sprites_tobat.anim"
+_sprAnimDracBat: 		.import binary "data/Sprites_bat.anim"
+_sprAnimDracFromBat: 	.import binary "data/Sprites_frombat.anim"
+
+_sprAnimCoinSpawn: 		.import binary "data/Sprites_coinspawn.anim"
+_sprAnimCoinSpin: 		.import binary "data/Sprites_coinspin.anim"
 
 *=$2000 "Map"
 .var map = LoadBinary("data/test.map");
@@ -31,12 +37,12 @@ _map4: .fill $100, map.get(4*line + mod(i,line));
 
 *=$2600 "Tiles"
 _tiles:
-.var tiles = LoadBinary("data/MyTileSet.tile");
+.var tiles = LoadBinary("data/Tiles.tile");
 .fill tiles.getSize(), tiles.get( (i&$fff0) + ((i>>2)&$03) + ((i&$03)<<2) );
 
-*=$2800 "Tile Colors"
+*=$2a00 "Tile Colors"
 _tileColors:
-.var tile_colors = LoadBinary("data/MyTileSet.cmap");
+.var tile_colors = LoadBinary("data/Tiles.cmap");
 .fill tile_colors.getSize(), tile_colors.get( (i&$fff0) + ((i>>2)&$03) + ((i&$03)<<2) );
 
 *=$3000 "Color Buffer 1" virtual 
@@ -49,11 +55,11 @@ _color2:
 
 *=$3800 "Background"
 _background:
-.import binary "data/Screen.tile"
+.import binary "data/Screens.tile"
 
 *=$3c00 "Background Colors"
 _backgroundColors:
-.import binary "data/Screen.cmap"
+.import binary "data/Screens.cmap"
 
 .const SCREEN1_BITS = %0000<<4
 *=$4000 "Screen Buffer 1" virtual 
@@ -68,7 +74,7 @@ _screen2:
 .const FONT0_BITS = %010<<1
 *=$5000 "Font Shift 0"
 _font1:
-.import binary "data/MyTest.font"
+.import binary "data/Characters.font"
 
 .const FONT2_BITS = %011<<1
 *=$5800 "Font Shift 2" virtual
@@ -84,7 +90,7 @@ _font4:
 
 *=$7000 "Sprite Graphics"
 _spriteGfx:
-.import binary "data/Dracula.spr"
+.import binary "data/Sprites.spr"
 
 //----------------------------------------------------------
 //----------------------------------------------------------
@@ -156,7 +162,8 @@ start:  sei
 
         SprManagerInit($00,$09,$c0,$ff)
 
-        SprSetHandler(0, PlayerControl)
+        SprSetHandler(SPR_Player, PlySpawn)
+        SprSetHandler(SPR_Coin, CoinSpawn)
 
         jmp *	// Jump to self
 
@@ -179,7 +186,8 @@ start:  sei
 irq1:
         SetBorderColor(3)
 		lda #$00
-		sta $d016
+		sta $d016 // no scroll here
+		sta $d015 // no sprites here
 
 //		jsr PlayerControl
 //		inc $d001 // Gravity for sprite 0
@@ -192,6 +200,8 @@ irq1:
 
 irq2:
         SetBorderColor(2)
+		lda #$ff // Turn sprites on again
+		sta $d015
 		lda $d018
 		and #$80
 		ora _screenBits
@@ -466,6 +476,7 @@ _tileOffset: .byte 0
 _tileIndex: .byte 0
 
 #import "Player.asm"
+#import "Coin.asm"
 
 //----------------------------------------------------------
 //        *=$1000 "Music"

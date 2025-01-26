@@ -1,19 +1,4 @@
-_state: .word PLY_Spawn
-
-PlayerControl:
-{
-		jmp (_state)
-}
-
-.macro PlySetState(addr)
-{
-	lda #<addr
-	sta _state
-	lda #>addr
-	sta _state+1
-}
-
-PLY_Spawn:
+PlySpawn:
 {
 	    lda #80
 	    SprSTA(SPR_X)
@@ -22,24 +7,24 @@ PLY_Spawn:
 
 	    SprSetFlags(SPRBIT_Ghost)
 
-		SprSetAnimation(_sprAnimDracRun, PLY_EOA_Spawn)
-		PlySetState(PLY_Spawning)
+		SprSetAnimation(_sprAnimDracAppear, PlyEOA_Spawn)
+		SprSetHandler(SPR_Player,PlySpawning)
 		rts
 }
 
-PLY_Spawning:
+PlySpawning:
 {
 		rts
 }
 
-PLY_Run:
+PlyRun:
 {
 		SprLDA(SPR_CharAt)
 		and #$f0
 		bne alive
 
-		SprSetAnimation(_sprAnimDracDie, PLY_EOA_Death)
-		PlySetState(PLY_Dead)
+		SprSetAnimation(_sprAnimDracDie, PlyEOA_Death)
+		SprSetHandler(SPR_Player,PlyDead)
 		rts
 
 alive:	SprLDA(SPR_CharBelow)
@@ -47,7 +32,7 @@ alive:	SprLDA(SPR_CharBelow)
 		beq gnd
 
 		SprSetAnimation(_sprAnimDracFalling, 0)
-		PlySetState(PLY_Falling)
+		SprSetHandler(SPR_Player,PlyFalling)
 		rts
 
 	gnd:
@@ -55,16 +40,16 @@ alive:	SprLDA(SPR_CharBelow)
 		ror
 		bcs no_up
 	    SprSetFlags(SPRBIT_Ghost)
-		SprSetAnimation(_sprAnimDracVanish, PLY_EOA_ReappearUp)
-		PlySetState(PLY_TeleportUp)
-		jmp PLY_TeleportUp
+		SprSetAnimation(_sprAnimDracVanish, PlyEOA_ReappearUp)
+		SprSetHandler(SPR_Player,PlyTeleportUp)
+		rts
 	no_up:
 		ror
 		bcs no_down
 	    SprSetFlags(SPRBIT_Ghost)
-		SprSetAnimation(_sprAnimDracVanish, PLY_EOA_ReappearDown)
-		PlySetState(PLY_TeleportDown)
-		jmp PLY_TeleportDown
+		SprSetAnimation(_sprAnimDracVanish, PlyEOA_ReappearDown)
+		SprSetHandler(SPR_Player,PlyTeleportDown)
+		rts
 	no_down:
 		ror
 		bcs no_left
@@ -74,18 +59,24 @@ alive:	SprLDA(SPR_CharBelow)
 		ror
 		bcs no_right
 		SprMoveRight(1)
+		rts
 	no_right:
+		ror
+		bcs no_fire
+		SprSetAnimation(_sprAnimDracToBat, PlyEOA_ToBat)
+		SprSetHandler(SPR_Player,PlyToBat)
+	no_fire:
 		rts
 }
 
-PLY_Falling:
+PlyFalling:
 {
 		SprLDA(SPR_CharAt)
 		and #$f0
 		bne alive
 
-		SprSetAnimation(_sprAnimDracDie, PLY_EOA_Death)
-		PlySetState(PLY_Dead)
+		SprSetAnimation(_sprAnimDracDie, PlyEOA_Death)
+		SprSetHandler(SPR_Player,PlyDead)
 		rts
 
 alive:	SprLDA(SPR_CharBelow)
@@ -100,7 +91,7 @@ alive:	SprLDA(SPR_CharBelow)
 		SprSTA(SPR_Y)
 
 		SprSetAnimation(_sprAnimDracRun, 0)
-		PlySetState(PLY_Run)
+		SprSetHandler(SPR_Player,PlyRun)
 		rts
 
 	falling:
@@ -122,22 +113,75 @@ alive:	SprLDA(SPR_CharBelow)
 		rts
 }
 
-PLY_TeleportUp:
+PlyToBat:
+{
+		SprLDA(SPR_CharAt)
+		and #$f0
+		bne alive
+
+		SprSetAnimation(_sprAnimDracDie, PlyEOA_Death)
+		SprSetHandler(SPR_Player,PlyDead)
+		rts
+
+alive:	SprMoveUp(1)
+		rts
+}
+
+PlyBat:
+{
+		SprLDA(SPR_CharAt)
+		and #$f0
+		bne alive
+
+		SprSetAnimation(_sprAnimDracDie, PlyEOA_Death)
+		SprSetHandler(SPR_Player,PlyDead)
+		rts
+		
+alive:	
+		lda $dc00
+		ror
+		bcs no_up
+		SprMoveUp(1)
+		rts
+	no_up:
+		ror
+		bcs no_down
+		SprMoveDown(1)
+		rts
+	no_down:
+		ror
+		bcs no_left
+		SprMoveLeft(2)
+		rts
+	no_left:
+		ror
+		bcs no_right
+		SprMoveRight(1)
+		rts
+	no_right:
+		ror
+		bcs no_fire
+		SprSetAnimation(_sprAnimDracFromBat, PlyEOA_FromBat)
+	no_fire:
+		rts
+}
+
+PlyTeleportUp:
 {
 		rts
 }
 
-PLY_TeleportDown:
+PlyTeleportDown:
 {
 		rts
 }
 
-PLY_Appear:
+PlyAppear:
 {
 		rts
 }
 
-PLY_Dead:
+PlyDead:
 {
 		SprMoveLeft(1)
 		SprLDA(SPR_CharBelow)
@@ -156,43 +200,57 @@ PLY_Dead:
 		rts
 }
 
-PLY_EOA_Spawn:
+PlyEOA_ToBat:
+{
+		SprSetAnimation(_sprAnimDracBat, 0)
+		SprSetHandler(SPR_Player,PlyBat)
+		rts
+}
+
+PlyEOA_FromBat:
+{
+		SprSetAnimation(_sprAnimDracFalling, 0)
+		SprSetHandler(SPR_Player,PlyFalling)
+		rts
+}
+
+PlyEOA_Spawn:
 {
 	    SprClearFlags(SPRBIT_Ghost)
-		SprSetAnimation(_sprAnimDracRun, 0)
-		PlySetState(PLY_Run)
+		SprSetAnimation(_sprAnimDracFalling, 0)
+		SprSetHandler(SPR_Player,PlyFalling)
 		rts
 }
 
-PLY_EOA_Death:
+PlyEOA_Death:
 {
 		SprSetAnimation(_sprAnimDracAppear, 0)
-		PlySetState(PLY_Spawn)
+		SprSetHandler(SPR_Player,PlySpawn)
 		rts
 }
 
-PLY_EOA_ReappearUp:
+PlyEOA_ReappearUp:
 {
 		SprMoveUp($48)
 		SprClearFlags(SPRBIT_Ghost)
-		SprSetAnimation(_sprAnimDracAppear, PLY_EOA_StartRun)
-		PlySetState(PLY_Appear)
+		SprSetAnimation(_sprAnimDracAppear, PlyEOA_StartRun)
+		SprSetHandler(SPR_Player,PlyAppear)
 		rts
 }
 
-PLY_EOA_ReappearDown:
+PlyEOA_ReappearDown:
 {
 		SprMoveDown($38)
 		SprClearFlags(SPRBIT_Ghost)
-		SprSetAnimation(_sprAnimDracAppear, PLY_EOA_StartRun)
-		PlySetState(PLY_Appear)
+		SprSetAnimation(_sprAnimDracAppear, PlyEOA_StartRun)
+		SprSetHandler(SPR_Player,PlyAppear)
 		rts
 }
 
-PLY_EOA_StartRun:
+PlyEOA_StartRun:
 {
 		SprSetAnimation(_sprAnimDracRun, 0)
-		PlySetState(PLY_Run)
+		SprSetHandler(SPR_Player,PlyRun)
 		rts
 }
 
