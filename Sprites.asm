@@ -276,7 +276,7 @@ _SprToSprCollision:
 		and $26
 		bne coll
 		rts
-coll:	.break
+coll:
 		lda $fb // Get index of current sprite
 		sta $f2
 next:	inc $f2 // Spr index of potential collision
