@@ -35,6 +35,10 @@ _map2: .fill $100, map.get(2*line + mod(i,line));
 _map3: .fill $100, map.get(3*line + mod(i,line));
 _map4: .fill $100, map.get(4*line + mod(i,line));
 
+*=$2500 "Tile Ptrs"
+_tilePtr:
+.lohifill $80, _tiles+16*i
+
 *=$2600 "Tiles"
 _tiles:
 .var tiles = LoadBinary("data/Tiles.tile");
@@ -189,9 +193,6 @@ irq1:
 		sta $d016 // no scroll here
 		sta $d015 // no sprites here
 
-//		jsr PlayerControl
-//		inc $d001 // Gravity for sprite 0
-
 		jsr SprUpdate
 
         SetBorderColor(0)
@@ -240,7 +241,7 @@ ShiftFont:
 	lda ($fe),y
 	ror
 	sta ($fe),y
-	iny
+	iny // Can't use adc since it will destroy the carry which we need to roll into the next char
 	iny
 	iny
 	iny
@@ -258,6 +259,7 @@ ShiftFont:
 	Add_8to16($fe,$ff,15*8)
 	dec $fb
 	bne top_loop
+	rts
 }
 
 
@@ -298,13 +300,11 @@ DrawMap2:
 DrawMap3:
 	ScrollX(0,FONT0_BITS)
 	ShiftBuffers(_screen1, _screen2, _color1, _color2, 14, 6)
-	SetBorderColor(11)
 	FillEdge(_map0, 0, _screen2, _color2)
 	FillEdge(_map1, 4, _screen2, _color2)
 	FillEdge(_map2, 8, _screen2, _color2)
 	FillEdge(_map3, 12, _screen2, _color2)
 	FillEdge(_map4, 16, _screen2, _color2)
-	SetBorderColor(12)
 	SwapToBuffer2()
 	rts
 
@@ -326,13 +326,11 @@ DrawMap6:
 DrawMap7:
 	ScrollX(0,FONT0_BITS)
 	ShiftBuffers(_screen2, _screen1, _color2, _color1, 14, 6)
-	SetBorderColor(11)
 	FillEdge(_map0, 0, _screen1, _color1)
 	FillEdge(_map1, 4, _screen1, _color1)
 	FillEdge(_map2, 8, _screen1, _color1)
 	FillEdge(_map3, 12, _screen1, _color1)
 	FillEdge(_map4, 16, _screen1, _color1)
-	SetBorderColor(12)
 	SwapToBuffer1()
 	rts
 
@@ -369,29 +367,17 @@ DrawMap7:
 
 .macro FillEdge(map_row, row0, screen, color)
 {
-	clc
-	lda #0
-	sta $ff 			// Reset the tilemap hi byte
 	ldx _tileIndex		// Get the next tile index
 	lda map_row,x
+	tax
+	lda _tilePtr,x
 	sta $fe           	// Store the index as the low byte for the tilemap
-	rol $fe            	// Then multiply by 16
-	rol $ff
-	rol $fe
-	rol $ff
-	rol $fe
-	rol $ff
-	rol $fe
-	rol $ff
-	lda $fe
 	sta $fc
-	lda $ff
-	tay
-	adc #>_tiles 		// Add the highbyte of the tile map to the tile offset
-	sta $ff 			// Now ($fe) points to the relevant tile
-	tya
-	adc #>_tileColors	// Add the highbyte of the tile map to the color tile offset
-	sta $fd 			// Now ($fe) points to the relevant color tile
+	lda _tilePtr+$80,x
+	sta $ff				// Now ($fe) points to the relevant tile
+	clc
+	adc #(>_tileColors)-(>_tiles)	// Add the highbyte of the tile map to the color tile offset
+	sta $fd 			// Now ($fc) points to the relevant color tile
 
 	ldy _tileOffset   	// Tiles are arranged row-first, so index by y and increase one for each row
 	.for(var row=0;row<4;row++)
