@@ -96,6 +96,15 @@ _font4:
 _spriteGfx:
 .import binary "data/Sprites.spr"
 
+*=$a000 "Font Tile Ptrs"
+_fontTilePtr:
+.lohifill $80, _fontTiles+4*i
+
+*=$a100 "Font"
+_fontTiles:
+.import binary "data/Font.tile"
+
+
 //----------------------------------------------------------
 //----------------------------------------------------------
 //   Simple IRQ
@@ -119,6 +128,14 @@ start:  sei
         sta $d011
         lda #$d4
         sta $d012
+
+        		// Make $A000 - $BFFF visible, without removing the kernel ($e000-$ffff)
+        lda #%00110110
+        sta $01
+
+		jsr DrawIntro
+
+		SwapToBuffer1()
 
 		lda $dd00
 		and #%11111100
@@ -145,8 +162,6 @@ start:  sei
 		jsr ShiftFont
 		lda #>_font4
 		jsr ShiftFont
-
-		SwapToBuffer1()
 
         lda $dc0d // Why are both these read into A?
         lda $dd0d  
@@ -284,7 +299,7 @@ DrawMap:
 
 DrawMap0:
 	ScrollX(6,FONT2_BITS)
-	CopyColor(_color1)
+	CopyScreen(_color1, $d800)
 	rts
 
 DrawMap1:
@@ -310,7 +325,7 @@ DrawMap3:
 
 DrawMap4:
 	ScrollX(6,FONT2_BITS)
-	CopyColor(_color2)
+	CopyScreen(_color2, $d800)
 	rts
 
 DrawMap5:
@@ -333,6 +348,161 @@ DrawMap7:
 	FillEdge(_map4, 16, _screen1, _color1)
 	SwapToBuffer1()
 	rts
+
+
+
+//------------------------------------------------------------
+// ($fa)->: String
+// $20->: Target Position X
+// $21->: Target Position Y
+// $fc->: Color
+
+_textIntro:
+.byte 6,16,2
+.text "DRAC"
+.byte 0
+.byte 7,14,6
+.text "BOANEO"
+.byte 0
+.byte $ff
+
+DrawIntro:
+{
+	DrawScreen(_textIntro)
+	rts
+}
+
+.macro DrawScreen(text)
+{
+	ClearScreen(_screen1, $a0)
+	ClearScreen(_color1, $00)
+	lda #<text
+	sta $fa
+	lda #>text
+	sta $fb
+	ldy #$ff
+next:
+	iny
+	lda ($fa),y
+	cmp #$ff
+	beq exit
+ok:	sta $fc
+	iny
+	lda ($fa),y
+	sta $20
+	iny
+	lda ($fa),y
+	sta $21
+loop:
+	iny
+	sty $23
+	lda ($fa),y
+	beq next
+	jsr DrawChar
+	inc $20
+	inc $20
+	ldy $23
+	jmp loop
+exit:
+	CopyScreen(_screen1, _screen2)
+	CopyScreen(_color1, _color2)
+	rts
+}
+
+.macro ClearScreen(screen, v)
+{
+	ldx #$00
+	loop:
+	lda #v
+	sta screen,x
+	sta screen+$100,x
+	sta screen+$200,x
+	inx
+	bne loop
+	ldx #32
+	loop2:
+	sta screen+$300,x
+	dex
+	bpl loop2
+}
+
+.macro CopyScreen(from, to)
+{
+	ldx #$00
+	loop:
+	lda from,x
+	sta to,x
+	lda from+$100,x
+	sta to+$100,x
+	lda from+$200,x
+	sta to+$200,x
+	inx
+	bne loop
+	ldx #32
+	loop2:
+	lda from+$300,x
+	sta to+$300,x
+	dex
+	bpl loop2
+}
+
+
+//------------------------------------------------------------
+// $20->: Target Position X
+// $21->: Target Position Y
+// $fc->: Color
+// A->: Char
+DrawChar:
+{
+	.break
+	sec
+	sbc #$40
+	tay
+	lda _fontTilePtr,y
+	sta $fe           	// Store the index as the low byte for the tilemap
+	lda _fontTilePtr+$80,y
+	sta $ff				// Now ($fe) points to the relevant tile
+
+	// Set hi bytes
+	ldy $21
+	clc
+	lda _screenPtr+25,y
+	adc #(>_color1)
+	sta $27 // ($26) is now the color buffer
+	adc #(>_screen1)-(>_color1)
+	sta $29 // ($28) is now the screen buffer
+
+	// Set lo bytes
+	ldy $21
+	lda $20
+	adc _screenPtr,y
+	bcc !nohi+
+	inc $27
+	inc $29
+	!nohi:
+	sta $26
+	sta $28
+
+	ldx #2
+	colloop:
+		ldy #1
+		rowloop:
+			lda ($fe),y 	// Get the character from the tile
+			sta ($28),y
+			lda $fc
+			sta ($26),y
+			dey
+			bpl rowloop
+
+		Add_8to16($26,$27,40)
+		Add_8to16($28,$29,40)
+		inc $fe
+		inc $fe
+		dex
+		bne colloop
+	rts
+}
+
 
 .macro ScrollX(amount, font_bits)
 {
@@ -395,26 +565,6 @@ DrawMap7:
 	}
 }
 
-.macro CopyColor(buffer)
-{
-	ldx #$00
-	loop:
-	lda buffer,x
-	sta $d800,x
-	lda buffer+256,x
-	sta $d900,x
-	lda buffer+512,x
-	sta $da00,x
-	inx
-	bne loop
-	ldx #32
-	loop2:
-	lda buffer+768,x
-	sta $db00,x
-	dex
-	bpl loop2
-}
-
 .macro SetPointer(field, ptr)
 {
 	lda #<ptr
@@ -456,13 +606,13 @@ NextColumn:
 	exit:
 	rts
 
+_screenPtr: .lohifill 25, 40*i
 _drawers: .word DrawMap0-1, DrawMap1-1, DrawMap2-1, DrawMap3-1, DrawMap4-1, DrawMap5-1, DrawMap6-1, DrawMap7-1
 _drawMapPass: .byte 0
 _screenBits: .byte SCREEN1_BITS
 _fontBits: .byte FONT0_BITS
 _tileOffset: .byte 0
 _tileIndex: .byte 0
-
 _coins: .byte 0
 
 #import "Player.asm"
