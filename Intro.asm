@@ -5,7 +5,7 @@ IntroInit:
 		lda #%11011000 // Turn on multicolor mode
 		sta $d016
 
-		lda #FONT0_BITS
+		lda #FONT_BITS
 		sta _fontBits
 
 		jsr DrawIntro
@@ -24,6 +24,12 @@ wait:	lda $dc00
 //----------------------------------------------------------
 IntroIRQ1:
 {
+		lda $d018
+		and #$80
+		ora _screenBits
+		ora #FONT_BITS
+		sta $d018
+
 	/*
 		ldx _timer
 		beq fade

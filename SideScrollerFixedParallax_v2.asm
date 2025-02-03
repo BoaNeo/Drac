@@ -18,62 +18,63 @@ DrawMap:
 }
 
 DrawMap0:
-	ScrollX(6,FONT2_BITS)
+	ScrollX(4,GFX2_BITS)
 	CopyColors(_color1)
 	rts
 
 DrawMap1:
-	ScrollX(4,FONT4_BITS)
+	ScrollX(2,GFX4_BITS)
 	ShiftBuffers(_screen1, _screen2, _color1, _color2, 0, 7)
 	rts
 
 DrawMap2:
-	ScrollX(2,FONT6_BITS)
+	ScrollX(0,GFX6_BITS)
 	ShiftBuffers(_screen1, _screen2, _color1, _color2, 7, 7)
 	rts
 
 DrawMap3:
-	ScrollX(0,FONT0_BITS)
+	ScrollX(6,GFX0_BITS)
+	SwapToBuffer2()
 	ShiftBuffers(_screen1, _screen2, _color1, _color2, 14, 6)
 	FillEdge(_map0, 0, _screen2, _color2)
 	FillEdge(_map1, 4, _screen2, _color2)
 	FillEdge(_map2, 8, _screen2, _color2)
 	FillEdge(_map3, 12, _screen2, _color2)
 	FillEdge(_map4, 16, _screen2, _color2)
-	SwapToBuffer2()
 	jmp NextColumn
 
 DrawMap4:
-	ScrollX(6,FONT2_BITS)
+	ScrollX(4,GFX2_BITS)
 	CopyColors(_color2)
 	rts
 
 DrawMap5:
-	ScrollX(4,FONT4_BITS)
+	ScrollX(2,GFX4_BITS)
 	ShiftBuffers(_screen2, _screen1, _color2, _color1, 0, 7)
 	rts
 
 DrawMap6:
-	ScrollX(2,FONT6_BITS)
+	ScrollX(0,GFX6_BITS)
 	ShiftBuffers(_screen2, _screen1, _color2, _color1, 7, 7)
 	rts
 
 DrawMap7:
-	ScrollX(0,FONT0_BITS)
+	ScrollX(6,GFX0_BITS)
+	SwapToBuffer1()
 	ShiftBuffers(_screen2, _screen1, _color2, _color1, 14, 6)
 	FillEdge(_map0, 0, _screen1, _color1)
 	FillEdge(_map1, 4, _screen1, _color1)
 	FillEdge(_map2, 8, _screen1, _color1)
 	FillEdge(_map3, 12, _screen1, _color1)
 	FillEdge(_map4, 16, _screen1, _color1)
-	SwapToBuffer1()
 	jmp NextColumn
 
 .macro ScrollX(amount, font_bits)
 {
 	lda #%11010000 // Turn on multicolor mode and shrink screen to 38 columns
 	ora #amount
-	sta $d016
+	sta _scrollX
+//	sta $d016
 	lda #font_bits
 	sta _fontBits
 }

@@ -23,19 +23,10 @@ IRQ_Init:
         rts
 
 IRQ_Handler:
-		lda $27 // Turn sprites on again ($27 holds active sprite mask from SprUpdate)
-		sta $d015
-
-		lda $d018
-		and #$80
-		ora _screenBits
-		ora _fontBits
-		sta $d018
-
 		jsr _IRQ_Func:IRQ_Default
 
 		lda $d011
-		and #$80
+		and #$7f
         ora _IRQ_LineHi:#$00 // #($1b | ( (raster>>1)&$80 ) )  // Set raster line interrupt (8 lower bits in d012, high bit is Bit 8 of d011, rest are default)
         sta $d011
         lda _IRQ_LineLo:#$00 // #(raster&$ff)
@@ -49,7 +40,7 @@ IRQ_Default:
 
 .macro IRQ_SetNext(raster, address)
 {
-        lda #($1b | ( (raster>>1)&$80 ) )  // Set raster line interrupt (8 lower bits in d012, high bit is Bit 8 of d011, rest are default)
+        lda #((raster>>1)&$80)  // Set raster line interrupt (8 lower bits in d012, high bit is Bit 8 of d011, rest are default)
         sta _IRQ_LineHi
         lda #(raster&$ff)
         sta _IRQ_LineLo

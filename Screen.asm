@@ -1,5 +1,6 @@
 _screenBits: .byte SCREEN1_BITS
-_fontBits: .byte FONT0_BITS
+_fontBits: .byte FONT_BITS
+_scrollX: .byte 0
 _screenPtr: .lohifill 25, 40*i
 
 .macro SwapToBuffer1()

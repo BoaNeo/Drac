@@ -2,13 +2,14 @@ _coins: .byte 0
 
 
 GameInit:
-	lda #$06
+{
+	lda #$00
         sta $d020
-        lda #$0e
+        lda #$09
         sta $d021
-        lda #$0c
-        sta $d022
         lda #$0b
+        sta $d022
+        lda #$0c
         sta $d023
 
         SprManagerInit($00,$09,$c0,$ff,OnSprCollision)
@@ -18,32 +19,95 @@ GameInit:
 
 	IRQ_SetNext($d4, GameIRQ1)
 
-        jmp *
+wait:	lda _shouldDrawMap
+	beq wait
+        SetBorderColor(2)
+        jsr DrawMap
+        lda #$0
+	sta _shouldDrawMap
+        SetBorderColor(0)
+        jmp wait
+}
 
+_shouldDrawMap: .byte 0
 
 //----------------------------------------------------------
 GameIRQ1:
-        SetBorderColor(3)
+{
+        lda #$00
+        sta $d021
+
 	lda #$00
 	sta $d016 // no scroll here
 
-	jsr SprUpdate
+	lda $d018
+	and #$80
+	ora _screenBits
+	ora #FONT_BITS
+	sta $d018
 
+        SetBorderColor(3)
+	jsr SprUpdate
         SetBorderColor(0)
 
-	IRQ_SetNext($fc, GameIRQ2)
+	IRQ_SetNext($f9, GameIRQ2)
 	rts
+}
 
 GameIRQ2:
-        SetBorderColor(2)
+{
+        lda $d011
+        and #%11110111
+        sta $d011
 
-        jsr DrawMap
+        nop
+        nop
+        nop
+        nop
+        nop
+        nop
+        nop
+        nop
+        nop
+        nop
+        nop
+        nop
 
-        SetBorderColor(0)
+        lda _scrollX
+	sta $d016
+
+	lda $d018
+	and #$80
+	ora _screenBits
+	ora _fontBits
+	sta $d018
+
+        lda #$01
+	sta _shouldDrawMap
+
+	IRQ_SetNext($32, GameIRQ3)
+	rts
+}
+
+GameIRQ3:
+{
+	nop // Make sure raster is off the right edge before changing the color
+	nop
+	nop
+	nop
+        lda #$09
+        sta $d021
+
+	lda $27 // Turn sprites on again ($27 holds active sprite mask from SprUpdate)
+	sta $d015
+
+        lda $d011
+        ora #%00001000
+        sta $d011
 
 	IRQ_SetNext($d4, GameIRQ1)
 	rts
-
+}
 
 #import "Player.asm"
 #import "Coin.asm"

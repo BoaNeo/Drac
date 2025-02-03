@@ -1,3 +1,5 @@
+.const CHAR_COLLISION_MASK = $f0
+
 PlySpawn:
 {
 	    lda #80
@@ -20,7 +22,7 @@ PlySpawning:
 PlyRun:
 {
 		SprLDA(SPR_CharAt)
-		and #$f0
+		and #CHAR_COLLISION_MASK
 		bne alive
 
 		SprSetAnimation(_sprAnimDracDie, PlyEOA_Death)
@@ -28,7 +30,7 @@ PlyRun:
 		rts
 
 alive:	SprLDA(SPR_CharBelow)
-		and #$f0 // First 16 characters are "ground"
+		and #CHAR_COLLISION_MASK // First 16 characters are "ground"
 		beq gnd
 
 		SprSetAnimation(_sprAnimDracFalling, 0)
@@ -72,7 +74,7 @@ alive:	SprLDA(SPR_CharBelow)
 PlyFalling:
 {
 		SprLDA(SPR_CharAt)
-		and #$f0
+		and #CHAR_COLLISION_MASK
 		bne alive
 
 		SprSetAnimation(_sprAnimDracDie, PlyEOA_Death)
@@ -80,15 +82,10 @@ PlyFalling:
 		rts
 
 alive:	SprLDA(SPR_CharBelow)
-		and #$f0 // First 16 characters are "ground"
+		and #CHAR_COLLISION_MASK // First 16 characters are "ground"
 		bne falling
 
-//		SprSnapY()
-		SprLDA(SPR_Y)
-		and #$f8
-		clc
-		adc #2+3 // Because we snap to an even byte and row zero is at 50, so we're already 2 pixels up, the sprite is 21, adding additional 3 pixels to reach an even byte
-		SprSTA(SPR_Y)
+		SnapToFloor()
 
 		SprSetAnimation(_sprAnimDracRun, 0)
 		SprSetHandler(SPR_Player,PlyRun)
@@ -130,7 +127,7 @@ alive:	SprMoveUp(1)
 PlyBat:
 {
 		SprLDA(SPR_CharAt)
-		and #$f0
+		and #CHAR_COLLISION_MASK
 		bne alive
 
 		SprSetAnimation(_sprAnimDracDie, PlyEOA_Death)
@@ -185,14 +182,10 @@ PlyDead:
 {
 		SprMoveLeft(1)
 		SprLDA(SPR_CharBelow)
-		and #$f0 // First 16 characters are "ground"
+		and #CHAR_COLLISION_MASK
 		bne falling
 
-		SprLDA(SPR_Y)
-		and #$f8
-		clc
-		adc #2+3 // Because we snap to an even byte and row zero is at 50, so we're already 2 pixels up, the sprite is 21, adding additional 3 pixels to reach an even byte
-		SprSTA(SPR_Y)
+		SnapToFloor()
 		rts
 
 	falling:
@@ -254,3 +247,11 @@ PlyEOA_StartRun:
 		rts
 }
 
+.macro SnapToFloor()
+{
+		SprLDA(SPR_Y)
+		and #$f8
+		clc
+		adc #2
+		SprSTA(SPR_Y)
+}
