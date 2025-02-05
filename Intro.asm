@@ -1,7 +1,7 @@
 IntroInit:
-  		lda #$00
-        sta $d020
-        sta $d021
+		SetBorderColor(BLACK)
+		SetScreenColor(BLACK)
+
 		lda #%11011000 // Turn on multicolor mode
 		sta $d016
 

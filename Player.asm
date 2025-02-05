@@ -181,6 +181,11 @@ PlyAppear:
 PlyDead:
 {
 		SprMoveLeft(1)
+		SprLDA(SPR_Frame)
+		bne no_blow
+		SprMoveLeft(1)
+
+	no_blow:
 		SprLDA(SPR_CharBelow)
 		and #CHAR_COLLISION_MASK
 		bne falling

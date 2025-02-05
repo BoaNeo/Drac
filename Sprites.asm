@@ -63,12 +63,8 @@ _screenRowOffsetHi:
 // ($fc) points to current sprite properties
 // $f2 is other sprite index
 // ($22) points to other sprite properties
-.macro SprManagerInit(color0, color1, base_index, off_screen_char, handler)
+.macro SprManagerInit(base_index, off_screen_char, handler)
 {
-	lda #color0
-	sta $d025 // Spr color M1
-	lda #color1
-	sta $d026 // Spr color M2
 	lda $d01e // Clear sprite collision (first read)
 	lda #$ff // Sprites in multicolor
 	sta $d01c
