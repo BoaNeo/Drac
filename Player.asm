@@ -1,4 +1,8 @@
 .const CHAR_COLLISION_MASK = $f0
+.const BAT_TIME = $20
+
+_batTimer:
+.byte 0 
 
 PlySpawn:
 {
@@ -29,40 +33,41 @@ PlyRun:
 		SprSetHandler(SPR_Player,PlyDead)
 		rts
 
-alive:	SprLDA(SPR_CharBelow)
+	alive:
+		SprLDA(SPR_CharBelow)
 		and #CHAR_COLLISION_MASK // First 16 characters are "ground"
-		beq gnd
+		beq up
 
 		SprSetAnimation(_sprAnimDracFalling, 0)
 		SprSetHandler(SPR_Player,PlyFalling)
 		rts
 
-	gnd:
+	up:
 		lda $dc00
 		ror
-		bcs no_up
+		bcs down
 	    SprSetFlags(SPRBIT_Ghost)
 		SprSetAnimation(_sprAnimDracVanish, PlyEOA_ReappearUp)
 		SprSetHandler(SPR_Player,PlyTeleportUp)
 		rts
-	no_up:
+	down:
 		ror
-		bcs no_down
+		bcs left
 	    SprSetFlags(SPRBIT_Ghost)
 		SprSetAnimation(_sprAnimDracVanish, PlyEOA_ReappearDown)
 		SprSetHandler(SPR_Player,PlyTeleportDown)
 		rts
-	no_down:
+	left:
 		ror
-		bcs no_left
+		bcs right
 		SprMoveLeft(2)
 		rts
-	no_left:
+	right:
 		ror
-		bcs no_right
+		bcs fire
 		SprMoveRight(1)
 		rts
-	no_right:
+	fire:
 		ror
 		bcs no_fire
 		SprSetAnimation(_sprAnimDracToBat, PlyEOA_ToBat)
@@ -81,7 +86,8 @@ PlyFalling:
 		SprSetHandler(SPR_Player,PlyDead)
 		rts
 
-alive:	SprLDA(SPR_CharBelow)
+	alive:
+		SprLDA(SPR_CharBelow)
 		and #CHAR_COLLISION_MASK // First 16 characters are "ground"
 		bne falling
 
@@ -98,15 +104,20 @@ alive:	SprLDA(SPR_CharBelow)
 		ror
 		ror
 		ror
-		bcs no_left
+		bcs right
 		SprMoveLeft(1)
-	exit:
-		rts
-	no_left:
+		jmp fire
+	right:
 		ror
-		bcs no_right
+		bcs fire
 		SprMoveRight(1)
-	no_right:
+	fire:
+		lda $dc00
+		and #$10
+		bne no_fire
+		SprSetAnimation(_sprAnimDracToBat, PlyEOA_ToBat)
+		SprSetHandler(SPR_Player,PlyToBat)
+	no_fire:
 		rts
 }
 
@@ -134,30 +145,37 @@ PlyBat:
 		SprSetHandler(SPR_Player,PlyDead)
 		rts
 		
-alive:	
+alive:
+		dec _batTimer
+		bne control
+
+		SprSetAnimation(_sprAnimDracFromBat, PlyEOA_FromBat)
+	control:
 		lda $dc00
 		ror
-		bcs no_up
+		bcs down
 		SprMoveUp(1)
-		rts
-	no_up:
+		jmp leftright
+	down:
 		ror
-		bcs no_down
+		bcs leftright
 		SprMoveDown(1)
-		rts
-	no_down:
+	leftright:
+		lda $dc00
 		ror
-		bcs no_left
+		ror
+		ror
+		bcs right
 		SprMoveLeft(2)
-		rts
-	no_left:
+		jmp fire
+	right:
 		ror
-		bcs no_right
+		bcs fire
 		SprMoveRight(1)
-		rts
-	no_right:
-		ror
-		bcs no_fire
+	fire:
+		lda $dc00
+		and #$10
+		bne no_fire
 		SprSetAnimation(_sprAnimDracFromBat, PlyEOA_FromBat)
 	no_fire:
 		rts
@@ -200,6 +218,8 @@ PlyDead:
 
 PlyEOA_ToBat:
 {
+		lda #BAT_TIME
+		sta _batTimer
 		SprSetAnimation(_sprAnimDracBat, 0)
 		SprSetHandler(SPR_Player,PlyBat)
 		rts

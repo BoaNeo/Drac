@@ -1,4 +1,7 @@
+.const COLOR_RAMP_SIZE = 17
+
 IntroInit:
+{
 		SetBorderColor(BLACK)
 		SetScreenColor(BLACK)
 
@@ -8,7 +11,16 @@ IntroInit:
 		lda #FONT_BITS
 		sta _fontBits
 
-		jsr DrawIntro
+		lda #1
+		sta _timer
+		sta _direction
+		lda #0
+		sta _screenIndex
+		lda #25+COLOR_RAMP_SIZE
+		sta _startRow
+
+		jsr ClearScreen1
+		jsr ClearColorRam
 
 		SwapToBuffer1()
 
@@ -22,86 +34,181 @@ wait:	lda $dc00
 
 
 //----------------------------------------------------------
+
 IntroIRQ1:
-{
 		lda $d018
 		and #$80
 		ora _screenBits
 		ora #FONT_BITS
 		sta $d018
 
-	/*
 		ldx _timer
 		beq fade
 		dex
 		stx _timer
 		rts
-fade:	ldy _startRow
-		cpy #33
+	fade:
+		ldy _startRow
+		cpy #25+COLOR_RAMP_SIZE // We've faded all 25 rows completely and we can start over
 		beq reset
-		ldx #7
-rows:	cpy #25
-		bcs skip
-		lda _rampUp,x
-		lda _screenPtr,y
+		ldx #COLOR_RAMP_SIZE-1
+	rows:
+		cpy #COLOR_RAMP_SIZE // The first rows are off screen
+		bcc skip 
+		cpy #25+COLOR_RAMP_SIZE // The last are also off screen
+		bcs exit
+		lda _lineOffsets.lo,y // Get color ram offset for row y (lo byte)
 		sta $fe
-		sta $fc
-		lda _screenPtr+25,y
+		lda _lineOffsets.hi,y // Get color ram offset for row y (hi byte)
 		sta $ff
 		sty $22
-		lda ($fe),y
+//
+		cpx #(COLOR_RAMP_SIZE-1)
+		bne normal_fill
+		lda _direction
+		bne normal_fill
 
+		lda _srcOffsets.lo,y // Get color ram offset for row y (lo byte)
+		sta $fc
+		lda _srcOffsets.hi,y // Get color ram offset for row y (hi byte)
+		sta $fd
+		ldy #39
+	final_fill_line:
+		lda ($fc),y
+		sta ($fe),y
+		dey
+		bpl final_fill_line
+		jmp next
+//
+	normal_fill:
+		ldy #39
+		lda ramp: _rampUp,x
+	fill_line:
+		sta ($fe),y
+		dey
+		bpl fill_line
+	next:
 		ldy $22
-skip:
-		dey
-		bmi exit
+	skip:
+		iny
 		dex
-		bmi exit
-
-		inx
-		cpx #25
-		beq exit
-		dey
-		bne rows
-exit:	
+		bpl rows
+	exit:
+		inc _startRow
 		rts
-reset:	ldx #50
+	reset:
+		ldx #50
 		stx _timer
 		ldx #0
 		stx _startRow
-		*/
+		lda _direction
+		bne up
+		lda #<_rampDown
+		sta ramp
+		lda #>_rampDown
+		sta ramp+1
+		inc _direction
 		rts
+	up:
+		lda #<_rampUp
+		sta ramp
+		lda #>_rampUp
+		sta ramp+1
+		dec _direction
+		ldx _screenIndex
+		lda _screensLo,x
+		bne set_screen
+		ldx #0
+		stx _screenIndex
+		lda _screensLo,x
+	set_screen:
+		sta $fa
+		lda _screensHi,x
+		sta $fb
+		inc _screenIndex
+		jmp DrawScreen
 
+_srcOffsets:
+		.lohifill 25+COLOR_RAMP_SIZE, i<COLOR_RAMP_SIZE ? _color1 : _color1+40*(i-COLOR_RAMP_SIZE)
+_lineOffsets:
+		.lohifill 25+COLOR_RAMP_SIZE, i<COLOR_RAMP_SIZE ? $d800 : $d800+40*(i-COLOR_RAMP_SIZE)
+
+_screenIndex: .byte 0
+_direction: .byte 0
 _startRow: .byte 0
 _timer: .byte 10
 _rowColors: .fill 25,1
-_rampDown: .byte 1,7,5,4,2,6,0
-_rampUp: .byte 0,6,2,4,5,7,1
-}
-
-DrawIntro:
-{
-	DrawScreen(_textIntro)
-	rts
+_rampDown: .byte WHITE,YELLOW,WHITE,YELLOW,YELLOW,CYAN,YELLOW,CYAN,CYAN,GREEN,CYAN,GREEN,GREEN,BLUE,GREEN,BLUE,BLACK
+_rampUp: .byte BLUE, GREEN, BLUE, GREEN, GREEN, CYAN, GREEN, CYAN, CYAN, YELLOW, CYAN, YELLOW, YELLOW, WHITE, YELLOW, WHITE, RED
+_screensLo: .byte <_textIntro, <_textHelp, <_textHighScore, 0
+_screensHi: .byte >_textIntro, >_textHelp, >_textHighScore, 0
 }
 
 _textIntro:
-.byte $02,14,1
+.byte RED,14,1
 .text "BOANEO"
 .byte 0
-.byte $03,12,4
-.text "PRESENTS"
+.byte CYAN,16,4
+.text "presents"
 .byte 0
-.byte $02,16,8
+.byte RED,16,8
 .text "DRAC"
 .byte 0
-.byte $07,11,23
-.text "PRESS"
+.byte YELLOW,11,23
+.text "PRESS FIRE"
 .byte 0
-.byte $07,22,23
-.text "FI"
+.byte $ff
+
+_textHelp:
+.byte GREEN,9,1
+.text "INSTRUCTIONS"
 .byte 0
-.byte $07,25,23
-.text "RE"
+.byte RED,8,6
+.text "UP"
+.byte 0
+.byte GREEN,19,6
+.text "Vanish Up"
+.byte 0
+.byte RED,8,9
+.text "DOWN"
+.byte 0
+.byte GREEN,19,9
+.text "Vanish Down"
+.byte 0
+.byte RED,8,12
+.text "FIRE"
+.byte 0
+.byte GREEN,19,12
+.text "Bat Mode"
+.byte 0
+.byte YELLOW,11,23
+.text "PRESS FIRE"
+.byte 0
+.byte $ff
+
+_textHighScore:
+.byte GREEN,11,1
+.text "HIGH SCORE"
+.byte 0
+.byte RED,11,6
+.text "1. TOX"
+.byte 0
+.byte GREEN,23,6
+.text "123456"
+.byte 0
+.byte RED,11,9
+.text "2. TOX"
+.byte 0
+.byte GREEN,23,9
+.text "123456"
+.byte 0
+.byte RED,11,12
+.text "3. TOX"
+.byte 0
+.byte GREEN,23,12
+.text "123456"
+.byte 0
+.byte YELLOW,11,23
+.text "PRESS FIRE"
 .byte 0
 .byte $ff

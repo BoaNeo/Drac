@@ -116,7 +116,7 @@ _fontTiles:
 //----------------------------------------------------------
 //----------------------------------------------------------
 
-        * = $8000 "Main Program"
+* = $8000 "Main Program"
 
 #import "IRQ.asm"
 #import "Screen.asm"
@@ -125,37 +125,37 @@ _fontTiles:
 #import "SideScrollerFixedParallax_v2.asm"
 
 Start:
-		jsr IRQ_Init
+	jsr IRQ_Init
       
       	// Make $A000 - $BFFF visible, without removing the kernel ($e000-$ffff)
         lda #%00110110
         sta $01
 
-		lda $dd00
-		and #%11111100
-		ora #%00000010 // Choose VIC Bank #1 ($4000-$7fff)
-		sta $dd00
+	lda $dd00
+	and #%11111100
+	ora #%00000010 // Choose VIC Bank #1 ($4000-$7fff)
+	sta $dd00
 
-		MemCpy(_gfx1,_gfx2,$800)
+	MemCpy(_gfx1,_gfx2,$800)
 
-		lda #>_gfx2
-		jsr ShiftFont
-		lda #>_gfx2
-		jsr ShiftFont
+	lda #>_gfx2
+	jsr ShiftFont
+	lda #>_gfx2
+	jsr ShiftFont
 
-		MemCpy(_gfx2,_gfx3,$800)
+	MemCpy(_gfx2,_gfx3,$800)
 
-		lda #>_gfx3
-		jsr ShiftFont
-		lda #>_gfx3
-		jsr ShiftFont
+	lda #>_gfx3
+	jsr ShiftFont
+	lda #>_gfx3
+	jsr ShiftFont
 
-		MemCpy(_gfx3,_gfx4,$800)
+	MemCpy(_gfx3,_gfx4,$800)
 
-		lda #>_gfx4
-		jsr ShiftFont
-		lda #>_gfx4
-		jsr ShiftFont
+	lda #>_gfx4
+	jsr ShiftFont
+	lda #>_gfx4
+	jsr ShiftFont
 
 gameloop:
         jsr IntroInit
