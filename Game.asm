@@ -1,4 +1,4 @@
-_coins: .byte 0
+_tokens: .byte 0
 
 
 GameInit:
@@ -10,10 +10,19 @@ GameInit:
 	SetSprColor1(BLACK)
 	SetSprColor2(RED)
 
+	SwapToBuffer2()
+	lda #<_textHUD
+	sta $fa
+	lda #>_textHUD
+	sta $fb
+	jsr DrawScreen
+	jsr ApplyColorBuffer1
+	SwapToBuffer1()
+
         SprManagerInit($c0,$ff,OnSprCollision)
 
         SprSetHandler(SPR_Player, PlySpawn)
-        SprSetHandler(SPR_Coin, CoinSpawn)
+        SprSetHandler(SPR_Token, TokenSpawn)
 
 	IRQ_SetNext($d1, GameIRQ1)
 
@@ -28,18 +37,35 @@ wait:	lda _shouldDrawMap
 }
 
 _shouldDrawMap: .byte 0
+_textHUD:
+.byte BLACK,2,20
+.text "bats: ###"
+.byte 0
+.byte BLACK,16,20
+.text "lives: 3"
+.byte 0
+.byte BLACK,29,20
+.text "vanish: 3"
+.byte 0
+.byte YELLOW,10,23
+.text "RUN "
+.byte 'Z'+2
+.text " OF "
+.byte 'Z'+6
+.byte 0
+.byte $ff
 
 //----------------------------------------------------------
 GameIRQ1:
 {
-	SetScreenColor(BLACK)
+	SetScreenColor(RED)
 
 	lda #$00
 	sta $d016 // no scroll here
 
 	lda $d018
 	and #$80
-	ora _screenBits
+	ora #SCREEN1_BITS
 	ora #FONT_BITS
 	sta $d018
 
@@ -68,7 +94,7 @@ GameIRQ3:
         nop
         nop
         nop
-	SetScreenColor(RED)
+	SetScreenColor(BLACK)
 
         lda _scrollX
 	sta $d016
@@ -120,11 +146,11 @@ OnSprCollision:
 	bne exit
 
 	lda $f2
-	cmp #SPR_Coin
+	cmp #SPR_Token
 	bne exit
 
-	SprSetHandler(SPR_Coin, CoinPick)
-	inc _coins
+	SprSetHandler(SPR_Token, TokenPick)
+	inc _tokens
 
 exit:
 	rts

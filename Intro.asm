@@ -97,12 +97,12 @@ IntroIRQ1:
 		inc _startRow
 		rts
 	reset:
-		ldx #50
-		stx _timer
 		ldx #0
 		stx _startRow
 		lda _direction
 		bne up
+		ldx #180
+		stx _timer
 		lda #<_rampDown
 		sta ramp
 		lda #>_rampDown
@@ -110,6 +110,8 @@ IntroIRQ1:
 		inc _direction
 		rts
 	up:
+		ldx #5
+		stx _timer
 		lda #<_rampUp
 		sta ramp
 		lda #>_rampUp

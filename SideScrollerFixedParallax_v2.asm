@@ -106,10 +106,10 @@ DrawMap7:
 	ldx _tileIndex		// Get the next tile index
 	lda map_row,x
 	tax
-	lda _tilePtr,x
+	lda _tilePtr.lo,x
 	sta $fe           	// Store the index as the low byte for the tilemap
 	sta $fc
-	lda _tilePtr+$80,x
+	lda _tilePtr.hi,x
 	sta $ff				// Now ($fe) points to the relevant tile
 	clc
 	adc #(>_tileColors)-(>_tiles)	// Add the highbyte of the tile map to the color tile offset

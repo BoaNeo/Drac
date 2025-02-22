@@ -7,25 +7,28 @@ BasicUpstart2(Start)
 #import "Math.asm"
 
 .const SPR_Player = 0
-.const SPR_Coin = 1
+.const SPR_Token = 1
 
 * = $1000 "Sprites.asm"
 #import "Sprites.asm"
 
 * = * "Sprite Animations"
-_sprAnimEmpty: 			.import binary "data/Sprites_empty.anim"
+_sprAnimEmpty: 		.import binary "data/Sprites_empty.anim"
 
-_sprAnimDracRun: 		.import binary "data/Sprites_run.anim"
-_sprAnimDracDie: 		.import binary "data/Sprites_death.anim"
+_sprAnimDracRun: 	.import binary "data/Sprites_run.anim"
+_sprAnimDracDie: 	.import binary "data/Sprites_death.anim"
 _sprAnimDracVanish: 	.import binary "data/Sprites_vanish.anim"
 _sprAnimDracAppear: 	.import binary "data/Sprites_appear.anim"
 _sprAnimDracFalling: 	.import binary "data/Sprites_falling.anim"
-_sprAnimDracToBat: 		.import binary "data/Sprites_tobat.anim"
-_sprAnimDracBat: 		.import binary "data/Sprites_bat.anim"
+_sprAnimDracToBat: 	.import binary "data/Sprites_tobat.anim"
+_sprAnimDracBat: 	.import binary "data/Sprites_bat.anim"
 _sprAnimDracFromBat: 	.import binary "data/Sprites_frombat.anim"
 
-_sprAnimCoinSpawn: 		.import binary "data/Sprites_coinspawn.anim"
-_sprAnimCoinSpin: 		.import binary "data/Sprites_coinspin.anim"
+_sprAnimCoinSpawn: 	.import binary "data/Sprites_coinspawn.anim"
+_sprAnimCoinSpin: 	.import binary "data/Sprites_coinspin.anim"
+
+_sprAnimBloodSpawn: 	.import binary "data/Sprites_bloodspawn.anim"
+_sprAnimBloodSpin: 	.import binary "data/Sprites_bloodspawn.anim"
 
 *=$2000 "Map"
 .var map = LoadBinary("data/Map01.map");
@@ -108,7 +111,7 @@ _fontTilePtr:
 
 *=$a100 "Font"
 _fontTiles:
-.import binary "data/Font.tile"
+.import binary "data/BigFont2.tile"
 
 //----------------------------------------------------------
 //----------------------------------------------------------

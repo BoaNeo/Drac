@@ -39,6 +39,17 @@ ClearColorRam:
 	ClearScreen($d800,0)
 	rts
 }
+ApplyColorBuffer1:
+{
+	CopyScreen(_color1, $d800)
+	rts
+}
+ApplyColorBuffer2:
+{
+	CopyScreen(_color2, $d800)
+	rts
+}
+
 
 DrawScreen:
 {
@@ -173,10 +184,10 @@ DrawChar:
 		sta $26
 		sta $28
 
-		cpx #('I'-$40)
-		bne wide
-		dec $20
-	wide:
+//		cpx #('I'-$40)
+//		bne wide
+//		dec $20
+//	wide:
 
 		ldx #2
 		colloop:
