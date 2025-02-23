@@ -220,50 +220,6 @@ _screenRowOffsetHi:
 !next:
 }
 
-.macro SprMoveUp(dy)
-{
-		SprLDA(SPR_Y)
-		sec
-		sbc #dy
-		bcc not_ok
-		cmp #30
-		bcs ok
-not_ok:	lda #30
-ok:		SprSTA(SPR_Y)
-}
-
-.macro SprMoveDown(dy)
-{
-		SprLDA(SPR_Y)
-		clc
-		adc #dy
-		bcc ok
-		lda #255-21
-ok:		SprSTA(SPR_Y)
-}
-
-.macro SprMoveLeft(dx)
-{
-		SprLDA(SPR_X)
-		sec
-		sbc #dx
-		bcc not_ok
-		cmp #8
-		bcs ok
-not_ok:	lda #8
-ok:		SprSTA(SPR_X)
-}
-
-.macro SprMoveRight(dx)
-{
-		SprLDA(SPR_X)
-		clc
-		adc #dx
-		bcc ok
-		lda #255-24
-ok:		SprSTA(SPR_X)
-}
-
 .macro SprSetScreenPt(screen1,screen2)
 {
 		lda #>screen1
@@ -290,9 +246,9 @@ SprUpdate:
 		ldx #spr
 		stx $fb
 		// Set spr data pt
-		lda _sprOffset,x
+		lda _sprOffset.lo,x
 		sta $fc
-		lda _sprOffset+SPR_COUNT,x
+		lda _sprOffset.hi,x
 		sta $fd
 
 		SprLDA(SPR_HandlerHi)
@@ -347,9 +303,9 @@ next:	inc $f2 // Spr index of potential collision
 
 		ldx $f2
 		// Set spr data pt
-		lda _sprOffset,x
+		lda _sprOffset.lo,x
 		sta $22
-		lda _sprOffset+SPR_COUNT,x
+		lda _sprOffset.hi,x
 		sta $23
 
 		// Potential collision between sprite with index $fb (current) and index $f2, check AABB
@@ -362,6 +318,16 @@ next:	inc $f2 // Spr index of potential collision
 		and #SPRBIT_IsCollider
 		beq next
 
+		lda ($22),y
+		and #SPRBIT_ExtendY
+		beq normal_height
+		lda #42
+		bne set_height
+	normal_height:
+		lda #21
+	set_height:
+		sta other_height
+
 		// Then check for X overlap		
 		SprLDA(SPR_X)
 		sta $24
@@ -369,12 +335,12 @@ next:	inc $f2 // Spr index of potential collision
 		lda ($22),y
 		sta $25
 		clc
-		adc #12
+		adc other_width: #12
 		cmp $24
 		bcc next
 		lda $24
 		clc
-		adc #12
+		adc my_width: #12
 		cmp $25
 		bcc next
 
@@ -385,12 +351,12 @@ next:	inc $f2 // Spr index of potential collision
 		lda ($22),y
 		sta $25
 		clc
-		adc #12
+		adc other_height: #21
 		cmp $24
 		bcc next
 		lda $24
 		clc
-		adc #12
+		adc my_height: #21
 		cmp $25
 		bcc next
 

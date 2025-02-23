@@ -1,8 +1,8 @@
 .const CHAR_COLLISION_MASK = $f0
 .const BAT_TIME = $20
 
-_batTimer:
-.byte 0 
+_batTimer: .byte 0 
+_playerDie: .byte 0
 
 PlySpawn:
 {
@@ -10,6 +10,8 @@ PlySpawn:
 	    SprSTA(SPR_X)
 	    lda #80
 	    SprSTA(SPR_Y)
+	    lda #20
+	    SprSTA(SPR_CharAt)
 
 	    SprClearFlags(SPRBIT_CheckCollision)
 
@@ -20,15 +22,21 @@ PlySpawn:
 
 PlySpawning:
 {
+		lda #0
+		sta _playerDie
 		rts
 }
 
 PlyRun:
 {
+		lda _playerDie
+		bne dead
+
 		SprLDA(SPR_CharAt)
 		and #CHAR_COLLISION_MASK
 		bne alive
 
+	dead:
 		SprSetAnimation(_sprAnimDracDie, PlyEOA_Death)
 		SprSetHandler(SPR_Player,PlyDead)
 		rts
@@ -60,12 +68,12 @@ PlyRun:
 	left:
 		ror
 		bcs right
-		SprMoveLeft(2)
+		PlyMoveLeft(2)
 		rts
 	right:
 		ror
 		bcs fire
-		SprMoveRight(1)
+		PlyMoveRight(1)
 		rts
 	fire:
 		ror
@@ -76,11 +84,17 @@ PlyRun:
 		rts
 }
 
+
 PlyFalling:
 {
+		lda _playerDie
+		bne dead
+
 		SprLDA(SPR_CharAt)
 		and #CHAR_COLLISION_MASK
 		bne alive
+
+	dead:
 
 		SprSetAnimation(_sprAnimDracDie, PlyEOA_Death)
 		SprSetHandler(SPR_Player,PlyDead)
@@ -98,19 +112,19 @@ PlyFalling:
 		rts
 
 	falling:
-		SprMoveDown(1)
+		PlyMoveDown(1)
 
 		lda $dc00
 		ror
 		ror
 		ror
 		bcs right
-		SprMoveLeft(1)
+		PlyMoveLeft(1)
 		jmp fire
 	right:
 		ror
 		bcs fire
-		SprMoveRight(1)
+		PlyMoveRight(1)
 	fire:
 		lda $dc00
 		and #$10
@@ -123,23 +137,33 @@ PlyFalling:
 
 PlyToBat:
 {
+		lda _playerDie
+		bne dead
+
 		SprLDA(SPR_CharAt)
 		and #$f0
 		bne alive
+
+	dead:
 
 		SprSetAnimation(_sprAnimDracDie, PlyEOA_Death)
 		SprSetHandler(SPR_Player,PlyDead)
 		rts
 
-alive:	SprMoveUp(1)
+alive:	PlyMoveUp(1)
 		rts
 }
 
 PlyBat:
 {
+		lda _playerDie
+		bne dead
+
 		SprLDA(SPR_CharAt)
 		and #CHAR_COLLISION_MASK
 		bne alive
+
+	dead:
 
 		SprSetAnimation(_sprAnimDracDie, PlyEOA_Death)
 		SprSetHandler(SPR_Player,PlyDead)
@@ -154,24 +178,24 @@ alive:
 		lda $dc00
 		ror
 		bcs down
-		SprMoveUp(1)
+		PlyMoveUp(1)
 		jmp leftright
 	down:
 		ror
 		bcs leftright
-		SprMoveDown(1)
+		PlyMoveDown(1)
 	leftright:
 		lda $dc00
 		ror
 		ror
 		ror
 		bcs right
-		SprMoveLeft(2)
+		PlyMoveLeft(2)
 		jmp fire
 	right:
 		ror
 		bcs fire
-		SprMoveRight(1)
+		PlyMoveRight(1)
 	fire:
 		lda $dc00
 		and #$10
@@ -183,25 +207,34 @@ alive:
 
 PlyTeleportUp:
 {
+		lda #0
+		sta _playerDie
 		rts
 }
 
 PlyTeleportDown:
 {
+		lda #0
+		sta _playerDie
 		rts
 }
 
 PlyAppear:
 {
+		lda #0
+		sta _playerDie
 		rts
 }
 
 PlyDead:
 {
-		SprMoveLeft(1)
+		lda #0
+		sta _playerDie
+
+		PlyMoveLeft(1)
 		SprLDA(SPR_Frame)
 		bne no_blow
-		SprMoveLeft(1)
+		PlyMoveLeft(1)
 
 	no_blow:
 		SprLDA(SPR_CharBelow)
@@ -212,7 +245,7 @@ PlyDead:
 		rts
 
 	falling:
-		SprMoveDown(1)
+		PlyMoveDown(1)
 		rts
 }
 
@@ -249,7 +282,7 @@ PlyEOA_Death:
 
 PlyEOA_ReappearUp:
 {
-		SprMoveUp($48)
+		PlyMoveUp($48)
 	    SprSetFlags(SPRBIT_CheckCollision)
 		SprSetAnimation(_sprAnimDracAppear, PlyEOA_StartRun)
 		SprSetHandler(SPR_Player,PlyAppear)
@@ -258,7 +291,7 @@ PlyEOA_ReappearUp:
 
 PlyEOA_ReappearDown:
 {
-		SprMoveDown($38)
+		PlyMoveDown($38)
 	    SprSetFlags(SPRBIT_CheckCollision)
 		SprSetAnimation(_sprAnimDracAppear, PlyEOA_StartRun)
 		SprSetHandler(SPR_Player,PlyAppear)
@@ -280,3 +313,52 @@ PlyEOA_StartRun:
 		adc #2
 		SprSTA(SPR_Y)
 }
+
+.macro PlyMoveUp(dy)
+{
+		SprLDA(SPR_Y)
+		sec
+		sbc #dy
+		bcc not_ok
+		cmp #30
+		bcs ok
+not_ok:	lda #30
+ok:		SprSTA(SPR_Y)
+}
+
+.macro PlyMoveDown(dy)
+{
+		SprLDA(SPR_Y)
+		clc
+		adc #dy
+		cmp #VIS_BOTTOM-5*8
+		bcc ok
+		lda #1
+		sta _playerDie
+		lda #VIS_BOTTOM-5*8
+ok:		SprSTA(SPR_Y)
+}
+
+.macro PlyMoveLeft(dx)
+{
+		SprLDA(SPR_X)
+		sec
+		sbc #dx
+		bcc not_ok
+		cmp #VIS_LEFT+8
+		bcs ok
+not_ok:	lda #VIS_LEFT+8
+ok:		SprSTA(SPR_X)
+}
+
+.macro PlyMoveRight(dx)
+{
+		SprLDA(SPR_X)
+		clc
+		adc #dx
+		cmp #VIS_RIGHT-8
+		bcc ok
+		lda #VIS_RIGHT-8
+ok:		SprSTA(SPR_X)
+}
+

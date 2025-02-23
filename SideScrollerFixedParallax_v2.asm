@@ -18,23 +18,23 @@ DrawMap:
 }
 
 DrawMap0:
-	ScrollX(4,GFX2_BITS)
+	ScrollX(6,GFX0_BITS)
+	SwapToBuffer1()
 	CopyColors(_color1)
 	rts
 
 DrawMap1:
-	ScrollX(2,GFX4_BITS)
+	ScrollX(4,GFX2_BITS)
 	ShiftBuffers(_screen1, _screen2, _color1, _color2, 0, 7)
 	rts
 
 DrawMap2:
-	ScrollX(0,GFX6_BITS)
+	ScrollX(2,GFX4_BITS)
 	ShiftBuffers(_screen1, _screen2, _color1, _color2, 7, 7)
 	rts
 
 DrawMap3:
-	ScrollX(6,GFX0_BITS)
-	SwapToBuffer2()
+	ScrollX(0,GFX6_BITS)
 	ShiftBuffers(_screen1, _screen2, _color1, _color2, 14, 6)
 	FillEdge(_map0, 0, _screen2, _color2)
 	FillEdge(_map1, 4, _screen2, _color2)
@@ -45,23 +45,23 @@ DrawMap3:
 	jmp NextColumn
 
 DrawMap4:
-	ScrollX(4,GFX2_BITS)
+	ScrollX(6,GFX0_BITS)
+	SwapToBuffer2()
 	CopyColors(_color2)
 	rts
 
 DrawMap5:
-	ScrollX(2,GFX4_BITS)
+	ScrollX(4,GFX2_BITS)
 	ShiftBuffers(_screen2, _screen1, _color2, _color1, 0, 7)
 	rts
 
 DrawMap6:
-	ScrollX(0,GFX6_BITS)
+	ScrollX(2,GFX4_BITS)
 	ShiftBuffers(_screen2, _screen1, _color2, _color1, 7, 7)
 	rts
 
 DrawMap7:
-	ScrollX(6,GFX0_BITS)
-	SwapToBuffer1()
+	ScrollX(0,GFX6_BITS)
 	ShiftBuffers(_screen2, _screen1, _color2, _color1, 14, 6)
 	FillEdge(_map0, 0, _screen1, _color1)
 	FillEdge(_map1, 4, _screen1, _color1)

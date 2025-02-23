@@ -57,7 +57,7 @@ SpawnBloodOrCoin:
 		ldx _tokenRow
 		lda _bloodY,x
 		SprSTA(SPR_Y)
-		lda #VIS_RIGHT+4
+		lda #VIS_RIGHT
 		SprSTA(SPR_X)
 		SprSetAnimation(_sprAnimBloodSpin, 0)
 		SprSetHandler(SPR_BloodOrCoin, MoveBloodOrCoin)
@@ -68,7 +68,7 @@ SpawnBloodOrCoin:
 		ldx _tokenRow
 		lda _coinY,x
 		SprSTA(SPR_Y)
-		lda #VIS_RIGHT+4
+		lda #VIS_RIGHT
 		SprSTA(SPR_X)
 		SprSetAnimation(_sprAnimCoinSpin, 0)
 		SprSetHandler(SPR_BloodOrCoin, MoveBloodOrCoin)
@@ -104,7 +104,7 @@ SpawnSwitch:
 		ldx _tokenRow
 		lda _switchY,x
 		SprSTA(SPR_Y)
-		lda #VIS_RIGHT+4
+		lda #VIS_RIGHT
 		SprSTA(SPR_X)
 		SprSetAnimation(_sprAnimSwitchOff, 0)
 		SprSetHandler(SPR_Switch, MoveSwitch)
@@ -145,7 +145,7 @@ SpawnDoor:
 		ldx _tokenRow
 		lda _doorY,x
 		SprSTA(SPR_Y)
-		lda #VIS_RIGHT+6
+		lda #VIS_RIGHT+2
 		SprSTA(SPR_X)
 
 		SprSetFlags(SPRBIT_IsCollider)

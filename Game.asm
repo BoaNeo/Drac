@@ -9,8 +9,6 @@ GameInit:
 {
 	SetBorderColor(BLACK)
 	SetScreenColor(BROWN)
-	SetMultiColor1(DARK_GREY)
-	SetMultiColor2(GREY)
 	SetSprColor1(BLACK)
 	SetSprColor2(RED)
 
@@ -38,40 +36,94 @@ GameInit:
 
 wait:	lda _shouldDrawMap
 	beq wait
-        SetBorderColor(RED)
+//        SetBorderColor(RED)
+	jsr SprUpdate
         jsr DrawMap
         lda #$0
 	sta _shouldDrawMap
-        SetBorderColor(BLACK)
+  //      SetBorderColor(BLACK)
         jmp wait
 }
 
 _shouldDrawMap: .byte 0
 _textHUD:
-.byte BLACK,2,20
-.text "bats: ###"
+.byte $8,1,20
+.byte 'Z'+11
+.fill 6,'Z'+12
+.byte 'Z'+16
+.fill 3,'Z'+12
+.byte 'Z'+17
+.fill 6,'Z'+12
+.byte 'Z'+13
 .byte 0
+
+.byte $8,1,22
+.byte 'Z'+14
+.fill 34,$20
+.byte 'Z'+15
+.byte 0
+
 .byte BLACK,16,20
-.text "lives: 3"
+.text "DRAC"
 .byte 0
-.byte BLACK,29,20
-.text "vanish: 3"
+
+.byte 8+RED,5,23
+.byte 'Z'+18
+.byte 'Z'+18
+.byte 'Z'+18
 .byte 0
-.byte YELLOW,10,23
-.text "RUN "
-.byte 'Z'+2
-.text " OF "
-.byte 'Z'+6
+
+.byte YELLOW,14,22
+.text "0 of 5 coins"
 .byte 0
+
+.byte YELLOW,16,23
+.text "00:00:21"
+.byte 0
+
+.byte 8+RED,29,23
+.byte 'Z'+19
+.byte 'Z'+19
+.byte 'Z'+19
+.byte 0
+
 .byte $ff
+
+
 
 //----------------------------------------------------------
 GameIRQ1:
 {
-	SetScreenColor(RED)
+	wait:
+	lda $d012
+	cmp #$d2
+	bcc wait
 
-	lda #$00
-	sta $d016 // no scroll here
+	nop
+	nop
+	nop
+	nop
+	nop
+	nop
+	nop
+	nop
+	nop
+	nop
+
+	nop
+	nop
+	nop
+	nop
+	nop
+	nop
+	nop
+//	nop
+//	nop
+//	nop
+
+	SetScreenColor(RED)
+	lda #$10  // no scroll here, but keep multicolor mode on (bit 4)
+	sta $d016
 
 	lda $d018
 	and #$80
@@ -79,32 +131,43 @@ GameIRQ1:
 	ora #FONT_BITS
 	sta $d018
 
+	SetMultiColor1(ORANGE)
+	SetMultiColor2(YELLOW)
+
+        lda #$01
+	sta _shouldDrawMap
+
 //        SetBorderColor(CYAN)
-	jsr SprUpdate
 //        SetBorderColor(BLACK)
 
-	IRQ_SetNext($f9, GameIRQ2)
+	IRQ_SetNext($e0, GameIRQ2)
 	rts
 }
 
 GameIRQ2:
 {
-        lda $d011
-        and #%11110111
-        sta $d011
 
-
-	IRQ_SetNext($102, GameIRQ3)
-	rts
-}
-
-GameIRQ3:
-{
         nop
         nop
         nop
         nop
 	SetScreenColor(BLACK)
+	IRQ_SetNext($f9, GameIRQ3)
+	rts
+}
+
+GameIRQ3:
+{
+        lda $d011
+        and #%11110111 // Switch to 24 rows
+        sta $d011
+
+	IRQ_SetNext($102, GameIRQ4)
+	rts
+}
+
+GameIRQ4:
+{
 
         lda _scrollX
 	sta $d016
@@ -115,26 +178,25 @@ GameIRQ3:
 	ora _fontBits
 	sta $d018
 
-        lda #$01
-	sta _shouldDrawMap
-
-	IRQ_SetNext($32, GameIRQ4)
+	IRQ_SetNext($32, GameIRQ5)
 	rts
 }
 
-GameIRQ4:
+GameIRQ5:
 {
 	nop // Make sure raster is off the right edge before changing the color
 	nop
 	nop
 	nop
 	SetScreenColor(BROWN)
+	SetMultiColor1(DARK_GREY)
+	SetMultiColor2(GREY)
 
 	lda $27 // Turn sprites on again ($27 holds active sprite mask from SprUpdate)
 	sta $d015
 
         lda $d011
-        ora #%00001000
+        ora #%00001000 // Switch to 25 rows
         sta $d011
 
 	IRQ_SetNext($d1, GameIRQ1)
@@ -176,7 +238,8 @@ check_ply_collision:
 !next:	cmp #SPR_Door
 	bne !next+
 
-	SprSetHandler(SPR_Player,PlyDead)
+	lda #1
+	sta _playerDie
 
 	rts
 !next:
