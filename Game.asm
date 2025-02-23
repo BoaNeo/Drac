@@ -1,5 +1,9 @@
-_tokens: .byte 0
+_coins: .byte 0
 
+.const SPR_Player = 0
+.const SPR_BloodOrCoin = 1
+.const SPR_Door = 2
+.const SPR_Switch = 3
 
 GameInit:
 {
@@ -22,17 +26,23 @@ GameInit:
         SprManagerInit($c0,$ff,OnSprCollision)
 
         SprSetHandler(SPR_Player, PlySpawn)
-        SprSetHandler(SPR_Token, TokenSpawn)
+        SprSetHandler(SPR_BloodOrCoin, SpawnBloodOrCoin)
+        SprSetHandler(SPR_Door, SpawnDoor)
+        SprSetHandler(SPR_Switch, SpawnSwitch)
+
+        ExSprSetFlags(SPR_BloodOrCoin, SPRBIT_IsCollider)
+        ExSprSetFlags(SPR_Switch, SPRBIT_IsCollider)
+        ExSprSetFlags(SPR_Door, SPRBIT_IsCollider | SPRBIT_ExtendY)
 
 	IRQ_SetNext($d1, GameIRQ1)
 
 wait:	lda _shouldDrawMap
 	beq wait
-//        SetBorderColor(RED)
+        SetBorderColor(RED)
         jsr DrawMap
         lda #$0
 	sta _shouldDrawMap
-//        SetBorderColor(BLACK)
+        SetBorderColor(BLACK)
         jmp wait
 }
 
@@ -143,16 +153,34 @@ OnSprCollision:
 {
 	lda $fb
 	cmp #SPR_Player
-	bne exit
+	beq check_ply_collision
+	rts
 
+check_ply_collision:
 	lda $f2
-	cmp #SPR_Token
-	bne exit
+	cmp #SPR_BloodOrCoin
+	bne !next+
 
-	SprSetHandler(SPR_Token, TokenPick)
-	inc _tokens
+	SprSetHandler(SPR_BloodOrCoin, PickBloodOrCoin)
+	inc _coins
+	rts
 
-exit:
+!next:	cmp #SPR_Switch
+	bne !next+
+
+	lda #1
+	sta _openDoor
+	SprSetHandler(SPR_Switch, FlipSwitch)
+	rts
+
+!next:	cmp #SPR_Door
+	bne !next+
+
+	SprSetHandler(SPR_Player,PlyDead)
+
+	rts
+!next:
+
 	rts
 
 }

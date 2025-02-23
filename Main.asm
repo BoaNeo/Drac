@@ -6,9 +6,6 @@ BasicUpstart2(Start)
 #import "Mem.asm"
 #import "Math.asm"
 
-.const SPR_Player = 0
-.const SPR_Token = 1
-
 * = $1000 "Sprites.asm"
 #import "Sprites.asm"
 
@@ -24,11 +21,12 @@ _sprAnimDracToBat: 	.import binary "data/Sprites_tobat.anim"
 _sprAnimDracBat: 	.import binary "data/Sprites_bat.anim"
 _sprAnimDracFromBat: 	.import binary "data/Sprites_frombat.anim"
 
-_sprAnimCoinSpawn: 	.import binary "data/Sprites_coinspawn.anim"
 _sprAnimCoinSpin: 	.import binary "data/Sprites_coinspin.anim"
-
-_sprAnimBloodSpawn: 	.import binary "data/Sprites_bloodspawn.anim"
 _sprAnimBloodSpin: 	.import binary "data/Sprites_bloodspawn.anim"
+_sprAnimDoorClosed: 	.import binary "data/Sprites_doorclosed.anim"
+_sprAnimDoorOpen: 	.import binary "data/Sprites_dooropen.anim"
+_sprAnimSwitchOff: 	.import binary "data/Sprites_switchoff.anim"
+_sprAnimSwitchOn: 	.import binary "data/Sprites_switchon.anim"
 
 *=$2000 "Map"
 .var map = LoadBinary("data/Map01.map");

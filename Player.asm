@@ -11,7 +11,7 @@ PlySpawn:
 	    lda #80
 	    SprSTA(SPR_Y)
 
-	    SprSetFlags(SPRBIT_Ghost)
+	    SprClearFlags(SPRBIT_CheckCollision)
 
 		SprSetAnimation(_sprAnimDracAppear, PlyEOA_Spawn)
 		SprSetHandler(SPR_Player,PlySpawning)
@@ -46,14 +46,14 @@ PlyRun:
 		lda $dc00
 		ror
 		bcs down
-	    SprSetFlags(SPRBIT_Ghost)
+	    SprClearFlags(SPRBIT_CheckCollision)
 		SprSetAnimation(_sprAnimDracVanish, PlyEOA_ReappearUp)
 		SprSetHandler(SPR_Player,PlyTeleportUp)
 		rts
 	down:
 		ror
 		bcs left
-	    SprSetFlags(SPRBIT_Ghost)
+	    SprClearFlags(SPRBIT_CheckCollision)
 		SprSetAnimation(_sprAnimDracVanish, PlyEOA_ReappearDown)
 		SprSetHandler(SPR_Player,PlyTeleportDown)
 		rts
@@ -234,7 +234,7 @@ PlyEOA_FromBat:
 
 PlyEOA_Spawn:
 {
-	    SprClearFlags(SPRBIT_Ghost)
+	    SprSetFlags(SPRBIT_CheckCollision)
 		SprSetAnimation(_sprAnimDracFalling, 0)
 		SprSetHandler(SPR_Player,PlyFalling)
 		rts
@@ -250,7 +250,7 @@ PlyEOA_Death:
 PlyEOA_ReappearUp:
 {
 		SprMoveUp($48)
-		SprClearFlags(SPRBIT_Ghost)
+	    SprSetFlags(SPRBIT_CheckCollision)
 		SprSetAnimation(_sprAnimDracAppear, PlyEOA_StartRun)
 		SprSetHandler(SPR_Player,PlyAppear)
 		rts
@@ -259,7 +259,7 @@ PlyEOA_ReappearUp:
 PlyEOA_ReappearDown:
 {
 		SprMoveDown($38)
-		SprClearFlags(SPRBIT_Ghost)
+	    SprSetFlags(SPRBIT_CheckCollision)
 		SprSetAnimation(_sprAnimDracAppear, PlyEOA_StartRun)
 		SprSetHandler(SPR_Player,PlyAppear)
 		rts

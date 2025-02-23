@@ -1,20 +1,3 @@
-.const BLACK = $00
-.const WHITE = $01
-.const RED = $02
-.const CYAN = $03
-.const PURPLE = $04
-.const GREEN = $05
-.const BLUE = $06
-.const YELLOW = $07
-.const ORANGE = $08
-.const BROWN = $09
-.const PINK = $0a
-.const DARK_GREY = $0b
-.const GREY = $0c
-.const LT_GREEN = $0d
-.const LT_BLUE = $0e
-.const LT_GRAY = $0f
-
 //----------------------------------------------------------
 // A little macro
 .macro SetBorderColor(color) 

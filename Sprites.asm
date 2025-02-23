@@ -14,14 +14,15 @@
 .const SPR_CharBelow = 13
 .const SPR_SIZE = 14
 
-.const SPR_COUNT = 2
+.const SPR_COUNT = 4
 
-.const SPRBIT_Enabled = $01
+//.const SPRBIT_Enabled = $01 (Not used - sprites are enabled if they have an active handler)
+.const SPRBIT_ExtendY = $01
 .const SPRBIT_ExtendX = $02
-.const SPRBIT_ExtendY = $04
-.const SPRBIT_Multicolor = $08
-.const SPRBIT_BehindBackground = $10
-.const SPRBIT_Ghost = $20
+.const SPRBIT_Multicolor = $04
+.const SPRBIT_BehindBackground = $08
+.const SPRBIT_IsCollider = $40		 // Other sprites may collide with this
+.const SPRBIT_CheckCollision = $80   // This sprite checks collision against other sprites
 
 .const VIS_TOP = 50
 .const VIS_BOTTOM = VIS_TOP + 8*25 - 21
@@ -63,7 +64,7 @@ _screenRowOffsetHi:
 // ($fc) points to current sprite properties
 // $f2 is other sprite index
 // ($22) points to other sprite properties
-.macro SprManagerInit(base_index, off_screen_char, handler)
+.macro SprManagerInit(base_index, off_screen_char, collision_handler)
 {
 	lda $d01e // Clear sprite collision (first read)
 	lda #$ff // Sprites in multicolor
@@ -72,10 +73,15 @@ _screenRowOffsetHi:
 	sta _sprBaseIndex
 	lda #off_screen_char
 	sta _sprOffscreenChar
-	lda #<handler
+	lda #<collision_handler
 	sta @_collisionHandler
-	lda #>handler
+	lda #>collision_handler
 	sta @_collisionHandler+1
+}
+
+.macro SprHasHandler(spr)
+{
+	lda _sprites + spr*SPR_SIZE + SPR_HandlerHi
 }
 
 .macro SprSetHandler(spr, handler)
@@ -152,11 +158,66 @@ _screenRowOffsetHi:
 	SprSTA(SPR_Bits)
 }
 
+.macro ExSprSetFlags(spr, flags)
+{
+	lda _sprites + spr*SPR_SIZE + SPR_Bits
+	ora #flags
+	sta _sprites + spr*SPR_SIZE + SPR_Bits
+	ldx #spr // Current sprite index
+	ror
+	_SetBitXIfCarrySet($d017) // SPRBIT_ExtendY -  Spr double height
+	ror
+	_SetBitXIfCarrySet($d01d) // SPRBIT_ExtendX - Spr double width
+//	ror
+//	BitSetFromCarry($d01c) // SPRBIT_MultiColor -  Spr multicolor
+}
+
+.macro _SetBitXIfCarrySet(target)
+{
+	bcc !next+
+	tay
+	lda target
+	ora _bits,x
+	sta target
+	tya
+!next:
+}
+
 .macro SprClearFlags(flag)
 {
 	SprLDA(SPR_Bits)
 	and #~flag
 	SprSTA(SPR_Bits)
+	ldx $fb // Current sprite index
+	ror
+	_ClearBitXIfCarryClear($d017) // SPRBIT_ExtendY -  Spr double height
+	ror
+	_ClearBitXIfCarryClear($d01d) // SPRBIT_ExtendX - Spr double width
+}
+
+.macro ExSprClearFlags(spr, flags)
+{
+	lda _sprites + spr*SPR_SIZE + SPR_Bits
+	and #~flags
+	sta _sprites + spr*SPR_SIZE + SPR_Bits
+	ldx #spr // Current sprite index
+	ror
+	_SetBitXIfCarrySet($d017) // SPRBIT_ExtendY -  Spr double height
+	ror
+	_SetBitXIfCarrySet($d01d) // SPRBIT_ExtendX - Spr double width
+//	ror
+//	BitSetFromCarry($d01c) // SPRBIT_MultiColor -  Spr multicolor
+}
+
+.macro _ClearBitXIfCarryClear(target)
+{
+	bcs !next+
+	tay
+	lda target
+	and _bitMasks,x
+	sta target
+	tya
+!next:
 }
 
 .macro SprMoveUp(dy)
@@ -243,15 +304,16 @@ SprUpdate:
 		jsr $ffff
 
 		SprLDA(SPR_Bits)
-		and #SPRBIT_Ghost
-		bne ghost
+		and #SPRBIT_CheckCollision
+		beq skip_collision
 
 		jsr _SprToBackCollision
 		lda #1<<spr
 		jsr _SprToSprCollision
-	ghost:
+	skip_collision:
 		jsr _SprAnimateSingle
 		jsr _SprSetPosition
+		// Enable sprite
 		lda #1<<spr
 		ora $27
 		sta $27
@@ -297,8 +359,8 @@ next:	inc $f2 // Spr index of potential collision
 //		beq next
 		ldy #SPR_Bits
 		lda ($22),y
-		and #SPRBIT_Ghost
-		bne next
+		and #SPRBIT_IsCollider
+		beq next
 
 		// Then check for X overlap		
 		SprLDA(SPR_X)
@@ -458,19 +520,22 @@ no_anim:
 
 _SprSetPosition:
 {
+		// We use half-x internally because it is easier than having to deal with the extra hi bit in $d010
+		// So we get out internal X and multiply by 2, rolling the high bit into the carry
 		SprLDA(SPR_X)
 		clc
-		rol
+		rol 
 		tay
 
+		// ... Then store the carry in the sprites X-pos high bit in $d010
 		ldx $fb // Current sprite index
-		BitSetFromCarry($d010) // spr x hi
+		BitSetOrClearFromCarry($d010) // spr x hi
 		
-		lda $fb // Current sprite index
-		asl
+		txa // Current sprite index
+		asl // because sprite X and Y are stored in alternating registers, we have to multiply the index by 2
 		tax
-		tya
 
+		tya // Restore X coord
 		sta $d000,x // spr x lo
 
 		SprLDA(SPR_Y)
@@ -484,15 +549,15 @@ _SprSetPosition:
 	{
 		SprLDAsafe(SPR_Bits)
 		ror
-		BitSetFromCarry($d015) // Enable spr
+		BitSetOrClearFromCarry($d015) // Enable spr
 		ror
-		BitSetFromCarry($d017) // Spr double height
+		BitSetOrClearFromCarry($d017) // Spr double height
 		ror
-		BitSetFromCarry($d01d) // Spr double width
+		BitSetOrClearFromCarry($d01d) // Spr double width
 		ror
-		BitSetFromCarry($d01c) // Spr multicolor
+		BitSetOrClearFromCarry($d01c) // Spr multicolor
 		ror
-		BitSetFromCarry($d01b) // Spr priority bit (1=behind background)
+		BitSetOrClearFromCarry($d01b) // Spr priority bit (1=behind background)
 
 	}
 	*/
@@ -503,6 +568,22 @@ _SprSetPosition:
 _bits: .byte $01, $02, $04, $08, $10, $20, $40, $80
 _bitMasks: .byte ~$01, ~$02, ~$04, ~$08, ~$10, ~$20, ~$40, ~$80
 
+
+.macro SetBit(index, target)
+{
+	lda target
+	ldx #index
+	ora _bits,x
+	sta target
+}
+
+.macro ClearBit(index, target)
+{
+	lda target
+	ldx #index
+	and _bitMasks,x
+	sta target
+}
 
 // X->: The index of the bit to set
 // ->C: The CARRY will contain the value of the specified bit
@@ -515,7 +596,7 @@ _bitMasks: .byte ~$01, ~$02, ~$04, ~$08, ~$10, ~$20, ~$40, ~$80
 
 // X->: The index of the bit to set
 // C->: The value of the bit
-.macro BitSetFromCarry(target)
+.macro BitSetOrClearFromCarry(target)
 {
 		lda target
 		and _bitMasks,x

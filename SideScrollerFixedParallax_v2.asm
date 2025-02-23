@@ -41,6 +41,7 @@ DrawMap3:
 	FillEdge(_map2, 8, _screen2, _color2)
 	FillEdge(_map3, 12, _screen2, _color2)
 	FillEdge(_map4, 16, _screen2, _color2)
+	jsr TokenScan
 	jmp NextColumn
 
 DrawMap4:
@@ -67,6 +68,7 @@ DrawMap7:
 	FillEdge(_map2, 8, _screen1, _color1)
 	FillEdge(_map3, 12, _screen1, _color1)
 	FillEdge(_map4, 16, _screen1, _color1)
+	jsr TokenScan
 	jmp NextColumn
 
 .macro ScrollX(amount, font_bits)
