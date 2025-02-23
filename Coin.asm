@@ -170,6 +170,7 @@ MoveClosedDoor:
 		lda #0
 		sta _openDoor
 
+		SprADC(SPR_X,4)
 		SprSetAnimation(_sprAnimDoorOpen, 0)
 		SprClearFlags(SPRBIT_IsCollider)
 		SprSetHandler(SPR_Door, MoveOpenDoor)
