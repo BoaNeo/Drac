@@ -1,4 +1,40 @@
 _coins: .byte 0
+_animDelay: .byte 0
+_shouldDrawMap: .byte 0
+_textHUD:
+.byte $8,1,20
+.fill 7, 'Z'+11+i
+.byte 'Z'+11+8
+.fill 3,'A'
+.byte 'Z'+11+9
+.fill 7, 'Z'+11+i
+.byte 0
+
+.byte BLACK,16,20
+.text "DRAC"
+.byte 0
+
+.byte 8+RED,5,23
+.byte 'Z'+21
+.byte 'Z'+21
+.byte 'Z'+21
+.byte 0
+
+.byte YELLOW,15,22
+.text "coins: 0/5"
+.byte 0
+
+.byte RED,16,23
+.text "00:00:21"
+.byte 0
+
+.byte 8+RED,29,23
+.byte 'Z'+22
+.byte 'Z'+22
+.byte 'Z'+22
+.byte 0
+
+.byte $ff
 
 .const SPR_Player = 0
 .const SPR_BloodOrCoin = 1
@@ -36,58 +72,52 @@ GameInit:
 
 wait:	lda _shouldDrawMap
 	beq wait
-//        SetBorderColor(RED)
 	jsr SprUpdate
         jsr DrawMap
+        SetBorderColor(RED)
+        jsr AnimateFlames
+	SetBorderColor(BLACK)
         lda #$0
 	sta _shouldDrawMap
-  //      SetBorderColor(BLACK)
         jmp wait
 }
 
-_shouldDrawMap: .byte 0
-_textHUD:
-.byte $8,1,20
-.byte 'Z'+11
-.fill 6,'Z'+12
-.byte 'Z'+16
-.fill 3,'Z'+12
-.byte 'Z'+17
-.fill 6,'Z'+12
-.byte 'Z'+13
-.byte 0
+AnimateFlames:
+{
+	ldx _animDelay
+	ldy #2
+loop:
+	cpx #14
+	bcc ok
+	ldx #0
+	ok:
+	lda _screen1+40*20+1,x
+	adc #1
+	and #$0f
+	ora #$70
+	sta _screen1+40*20+1,x
+	lda _screen1+40*20+25,x
+	adc #1
+	and #$0f
+	ora #$70
+	sta _screen1+40*20+25,x
 
-.byte $8,1,22
-.byte 'Z'+14
-.fill 34,$20
-.byte 'Z'+15
-.byte 0
-
-.byte BLACK,16,20
-.text "DRAC"
-.byte 0
-
-.byte 8+RED,5,23
-.byte 'Z'+18
-.byte 'Z'+18
-.byte 'Z'+18
-.byte 0
-
-.byte YELLOW,14,22
-.text "0 of 5 coins"
-.byte 0
-
-.byte YELLOW,16,23
-.text "00:00:21"
-.byte 0
-
-.byte 8+RED,29,23
-.byte 'Z'+19
-.byte 'Z'+19
-.byte 'Z'+19
-.byte 0
-
-.byte $ff
+	lda _screen1+40*21+1,x
+	adc #1
+	and #$0f
+	ora #$80
+	sta _screen1+40*21+1,x
+	lda _screen1+40*21+25,x
+	adc #1
+	and #$0f
+	ora #$80
+	sta _screen1+40*21+25,x
+	inx
+	stx _animDelay
+	dey
+	bpl loop
+	rts
+}
 
 
 
