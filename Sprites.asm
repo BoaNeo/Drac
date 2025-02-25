@@ -77,6 +77,9 @@ _screenRowOffsetHi:
 	sta @_collisionHandler
 	lda #>collision_handler
 	sta @_collisionHandler+1
+	lda #$00
+	sta $27
+	sta $d015
 }
 
 .macro SprHasHandler(spr)
@@ -140,6 +143,7 @@ _screenRowOffsetHi:
 {
 	lda #0
 	SprSTA(SPR_Frame)
+	lda #$ff
 	SprSTA(SPR_AnimDelay)
 	lda #>anim
 	SprSTA(SPR_AnimPtHi)

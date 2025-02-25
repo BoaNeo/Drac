@@ -126,6 +126,16 @@ _fontTiles:
 #import "SideScrollerFixedParallax_v2.asm"
 
 Start:
+	lda #$10
+	sta $ff
+	wait_raster:
+	lda $d012
+	cmp #$20
+	bne wait_raster
+	jsr FadeToBlack
+	dec $ff
+	bne wait_raster
+
 	jsr IRQ_Init
       
       	// Make $A000 - $BFFF visible, without removing the kernel ($e000-$ffff)

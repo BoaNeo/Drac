@@ -44,17 +44,22 @@ _textHUD:
 GameInit:
 {
 	SetBorderColor(BLACK)
-	SetScreenColor(BROWN)
+	SetScreenColor(BLACK)
 	SetSprColor1(BLACK)
 	SetSprColor2(RED)
 
-	SwapToBuffer2()
+	jsr ClearScreen1
+	jsr ClearScreen2
+	jsr ClearColor1
+	jsr ClearColor2
+
 	lda #<_textHUD
 	sta $fa
 	lda #>_textHUD
 	sta $fb
 	jsr DrawScreen
 	jsr ApplyColorBuffer1
+
 	SwapToBuffer1()
 
         SprManagerInit($c0,$ff,OnSprCollision)
@@ -74,9 +79,9 @@ wait:	lda _shouldDrawMap
 	beq wait
 	jsr SprUpdate
         jsr DrawMap
-        SetBorderColor(RED)
+//        SetBorderColor(RED)
         jsr AnimateFlames
-	SetBorderColor(BLACK)
+//	SetBorderColor(BLACK)
         lda #$0
 	sta _shouldDrawMap
         jmp wait
@@ -85,7 +90,7 @@ wait:	lda _shouldDrawMap
 AnimateFlames:
 {
 	ldx _animDelay
-	ldy #2
+	ldy #1
 loop:
 	cpx #14
 	bcc ok

@@ -1,11 +1,11 @@
-.const COLOR_RAMP_SIZE = 17
+.const COLOR_RAMP_SIZE = 16
 
 IntroInit:
 {
 		SetBorderColor(BLACK)
 		SetScreenColor(BLACK)
 
-		lda #%11011000 // Turn on multicolor mode
+		lda #%11001000 // Turn on multicolor mode
 		sta $d016
 
 		lda #FONT_BITS
@@ -29,6 +29,18 @@ IntroInit:
 wait:	lda $dc00
 		and #%10000
 		bne wait
+
+		lda #$01
+		sta _timer
+		sta _direction
+		lda #<_rampDown
+		sta ramp
+		lda #>_rampDown
+		sta ramp+1
+
+wait_for_fade:
+		lda _direction
+		bne wait_for_fade 
 
 		rts
 
@@ -139,9 +151,12 @@ _screenIndex: .byte 0
 _direction: .byte 0
 _startRow: .byte 0
 _timer: .byte 10
-_rowColors: .fill 25,1
-_rampDown: .byte WHITE,YELLOW,WHITE,YELLOW,YELLOW,CYAN,YELLOW,CYAN,CYAN,GREEN,CYAN,GREEN,GREEN,BLUE,GREEN,BLUE,BLACK
-_rampUp: .byte BLUE, GREEN, BLUE, GREEN, GREEN, CYAN, GREEN, CYAN, CYAN, YELLOW, CYAN, YELLOW, YELLOW, WHITE, YELLOW, WHITE, RED
+//_rampDown: .byte WHITE,YELLOW,WHITE,YELLOW,YELLOW,CYAN,YELLOW,CYAN,CYAN,GREEN,CYAN,GREEN,GREEN,BLUE,GREEN,BLUE,BLACK
+_rampDown: .byte WHITE, LIGHT_GREEN, YELLOW, LIGHT_GRAY, CYAN, LIGHT_RED, GREEN, GRAY, LIGHT_BLUE, ORANGE, PURPLE, DARK_GRAY, RED, BROWN, BLUE, BLACK
+
+_rampUp: .byte BLACK, BLUE, BROWN, RED, DARK_GRAY, PURPLE, ORANGE, LIGHT_BLUE, GRAY, GREEN, LIGHT_RED, CYAN, LIGHT_GRAY, YELLOW, LIGHT_GREEN, WHITE
+
+//_rampUp: .byte BLUE, GREEN, BLUE, GREEN, GREEN, CYAN, GREEN, CYAN, CYAN, YELLOW, CYAN, YELLOW, YELLOW, WHITE, YELLOW, WHITE, RED
 _screensLo: .byte <_textIntro, <_textHelp, <_textHighScore, 0
 _screensHi: .byte >_textIntro, >_textHelp, >_textHighScore, 0
 }

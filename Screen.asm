@@ -34,6 +34,16 @@ ClearScreen2:
 	ClearScreen(_screen2, $a0)
 	rts
 }
+ClearColor1:
+{
+	ClearScreen(_color1, $00)
+	rts
+}
+ClearColor2:
+{
+	ClearScreen(_color2, $00)
+	rts
+}
 ClearColorRam:
 {
 	ClearScreen($d800,0)
