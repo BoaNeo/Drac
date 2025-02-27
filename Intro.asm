@@ -140,6 +140,7 @@ IntroIRQ1:
 		lda _screensHi,x
 		sta $fb
 		inc _screenIndex
+		jsr ClearScreen1
 		jmp DrawScreen
 
 _srcOffsets:

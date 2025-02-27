@@ -1,7 +1,7 @@
 _screenBits: .byte SCREEN1_BITS
 _fontBits: .byte FONT_BITS
 _scrollX: .byte 0
-_screenRowOffset: .lohifill 25, 40*i
+_screen1RowOffset: .lohifill 25, _screen1+40*i
 _colorRowOffset: .lohifill 25, $d800+40*i
 
 .macro SwapToBuffer1()
@@ -63,7 +63,6 @@ ApplyColorBuffer2:
 
 DrawScreen:
 {
-	jsr ClearScreen1
 	ldy #$ff
 next:
 	iny
@@ -86,8 +85,6 @@ loop:
 	ldy $23
 	jmp loop
 exit:
-//	CopyScreen(_screen1, _screen2)
-//	CopyScreen(_color1, _color2)
 	rts
 }
 
@@ -147,16 +144,15 @@ DrawChar:
 		// Set hi bytes
 		ldy $21
 		iny
-		lda _screenRowOffset.hi,y
+		lda _screen1RowOffset.hi,y
+		sta $29 
 		clc
-		adc #(>_screen1)
-		sta $29 // ($28) is now the screen buffer
 		adc #(>_color1)-(>_screen1)
-		sta $27 // ($26) is now the color buffer
+		sta $27 
 		// Set lo bytes
-		lda _screenRowOffset.lo,y
-		sta $26
-		sta $28
+		lda _screen1RowOffset.lo,y
+		sta $26 // ($26) is now the color buffer
+		sta $28 // ($28) is now the screen buffer
 
 		ldy $20
 		lda $fe
@@ -176,49 +172,98 @@ DrawChar:
 
 		// Set hi bytes
 		ldy $21
-		lda _screenRowOffset.hi,y
+		lda _screen1RowOffset.hi,y
+		sta $29
 		clc
-		adc #(>_screen1)
-		sta $29 // ($28) is now the screen buffer
 		adc #(>_color1)-(>_screen1)
-		sta $27 // ($26) is now the color buffer
+		sta $27
 
 		// Set lo bytes
 		lda $20
 		clc
-		adc _screenRowOffset.lo,y
+		adc _screen1RowOffset.lo,y
 		bcc !nohi+
 		inc $27
 		inc $29
 	!nohi:
-		sta $26
-		sta $28
+		sta $26 // ($26) is now the color buffer
+		sta $28 // ($28) is now the screen buffer
 
-//		cpx #('I'-$40)
-//		bne wide
-//		dec $20
-//	wide:
+		ldy #$00
+		lda ($fe),y 	// Get the character from the tile
+		sta ($28),y
+		lda $fc
+		sta ($26),y
+		iny
+		sta ($26),y
+		lda ($fe),y 	// Get the character from the tile
+		sta ($28),y
 
-		ldx #2
-		colloop:
-			ldy #1
-			rowloop:
-				lda ($fe),y 	// Get the character from the tile
-				sta ($28),y
-				lda $fc
-				sta ($26),y
-				dey
-				bpl rowloop
+		iny
+		lda ($fe),y 	// Get the character from the tile
+		tax
+		iny
+		lda ($fe),y 	// Get the character from the tile
 
-			Add_8to16($26,$27,40)
-			Add_8to16($28,$29,40)
-			inc $fe
-			inc $fe
-			dex
-			bne colloop
+		ldy #41
+		sta ($28),y
+		lda $fc
+		sta ($26),y
+		dey
+		sta ($26),y
+
+		txa
+		sta ($28),y
 
 		inc $20
 		inc $20
 		rts
 }
 
+//------------------------------------------------------------
+// $20->: Target Position X
+// $21->: Target Position Y
+// A->: Tile
+
+DrawTile:
+{
+		tax
+		lda _fontTilePtr.lo,x
+		sta $fe           	// Store the index as the low byte for the tilemap
+		lda _fontTilePtr.hi,x
+		sta $ff				// Now ($fe) points to the relevant tile
+
+		// Set hi bytes
+		ldy $21
+		lda _screen1RowOffset.hi,y
+		sta $29
+
+		// Set lo bytes
+		lda $20
+		clc
+		adc _screen1RowOffset.lo,y
+		bcc !nohi+
+		inc $29
+	!nohi:
+		sta $28 // ($28) is now the screen buffer
+
+		ldy #$00
+		lda ($fe),y 	// Get the character from the tile
+		sta ($28),y
+		iny
+		lda ($fe),y 	// Get the character from the tile
+		sta ($28),y
+
+		iny
+		lda ($fe),y 	// Get the character from the tile
+		tax
+		iny
+		lda ($fe),y 	// Get the character from the tile
+		ldy #41
+		sta ($28),y
+		dey
+		txa
+		sta ($28),y
+
+		rts
+}

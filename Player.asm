@@ -4,6 +4,10 @@
 _batTimer: .byte 0 
 _playerDie: .byte 0
 
+_coins: .byte 0
+_blood: .byte 0
+_lifes: .byte 0
+
 PlySpawn:
 {
 	    lda #80
@@ -54,6 +58,11 @@ PlyRun:
 		lda $dc00
 		ror
 		bcs down
+		lda _blood
+		bne !use_blood+
+		rts
+	!use_blood:
+		dec _blood
 	    SprClearFlags(SPRBIT_CheckCollision)
 		SprSetAnimation(_sprAnimDracVanish, PlyEOA_ReappearUp)
 		SprSetHandler(SPR_Player,PlyTeleportUp)
@@ -61,6 +70,11 @@ PlyRun:
 	down:
 		ror
 		bcs left
+		lda _blood
+		bne !use_blood+
+		rts
+	!use_blood:
+		dec _blood
 	    SprClearFlags(SPRBIT_CheckCollision)
 		SprSetAnimation(_sprAnimDracVanish, PlyEOA_ReappearDown)
 		SprSetHandler(SPR_Player,PlyTeleportDown)
@@ -275,6 +289,11 @@ PlyEOA_Spawn:
 
 PlyEOA_Death:
 {
+		dec _lifes
+		lda _lifes
+		beq game_over
+
+game_over:		
 		SprSetAnimation(_sprAnimDracAppear, 0)
 		SprSetHandler(SPR_Player,PlySpawn)
 		rts

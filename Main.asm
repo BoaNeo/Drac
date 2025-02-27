@@ -28,25 +28,24 @@ _sprAnimDoorOpen: 	.import binary "data/Sprites_dooropen.anim"
 _sprAnimSwitchOff: 	.import binary "data/Sprites_switchoff.anim"
 _sprAnimSwitchOn: 	.import binary "data/Sprites_switchon.anim"
 
-*=$2000 "Map"
-.var map = LoadBinary("data/Map01.map");
-.var line = map.getSize()/5;
-_map0: .fill $100, map.get(0*line + mod(i,line));
-_map1: .fill $100, map.get(1*line + mod(i,line));
-_map2: .fill $100, map.get(2*line + mod(i,line));
-_map3: .fill $100, map.get(3*line + mod(i,line));
-_map4: .fill $100, map.get(4*line + mod(i,line));
+*=$2000 "Font Tile Ptrs"
+_fontTilePtr:
+.lohifill $80, _fontTiles+4*i
 
-*=$2500 "Tile Ptrs"
+*=$2100 "Font Tiles"
+_fontTiles:
+.import binary "data/BigFont2.tile"
+
+*=$2200 "Tile Ptrs"
 _tilePtr:
 .lohifill $80, _tiles+16*i
 
-*=$2600 "Tiles"
+*=$2300 "Tiles"
 _tiles:
 .var tiles = LoadBinary("data/Foreground.tile");
 .fill tiles.getSize(), tiles.get( (i&$fff0) + ((i>>2)&$03) + ((i&$03)<<2) );
 
-*=$2a00 "Tile Colors"
+*=$2800 "Tile Colors"
 _tileColors:
 .var tile_colors = LoadBinary("data/Foreground.cmap");
 .fill tile_colors.getSize(), tile_colors.get( (i&$fff0) + ((i>>2)&$03) + ((i&$03)<<2) );
@@ -103,13 +102,14 @@ _gfx4:
 _spriteGfx:
 .import binary "data/Sprites.spr"
 
-*=$a000 "Font Tile Ptrs"
-_fontTilePtr:
-.lohifill $80, _fontTiles+4*i
-
-*=$a100 "Font"
-_fontTiles:
-.import binary "data/BigFont2.tile"
+*=$a000 "Map 1"
+.var map = LoadBinary("data/Map01.map");
+.var line = map.getSize()/5;
+_map0: .fill $100, map.get(0*line + mod(i,line));
+_map1: .fill $100, map.get(1*line + mod(i,line));
+_map2: .fill $100, map.get(2*line + mod(i,line));
+_map3: .fill $100, map.get(3*line + mod(i,line));
+_map4: .fill $100, map.get(4*line + mod(i,line));
 
 //----------------------------------------------------------
 //----------------------------------------------------------
@@ -138,9 +138,9 @@ Start:
 
 	jsr IRQ_Init
       
-      	// Make $A000 - $BFFF visible, without removing the kernel ($e000-$ffff)
-        lda #%00110110
-        sta $01
+  	// Make $A000 - $BFFF visible, without removing the kernel ($e000-$ffff)
+    lda #%00110110
+    sta $01
 
 	lda $dd00
 	and #%11111100
@@ -169,13 +169,13 @@ Start:
 	jsr ShiftFont
 
 gameloop:
-        jsr IntroInit
+    jsr IntroInit
 
-        jsr GameInit 
+    jsr GameInit 
 
-        //jsr GameOverInit
+    //jsr GameOverInit
 
-        jmp gameloop
+    jmp gameloop
 
 //----------------------------------------------------------
 

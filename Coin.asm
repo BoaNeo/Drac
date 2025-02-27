@@ -3,6 +3,7 @@ _tokenType: .byte 0
 _tokenRow: .byte 0
 
 _openDoor: .byte 0
+_coinOrBlood: .byte
 
 _coinY: .fill 20, VIS_TOP + i*8-7
 _bloodY: .fill 20, VIS_TOP + i*8+2
@@ -52,6 +53,7 @@ SpawnBloodOrCoin:
 		beq spawn_coin
 		rts
 	spawn_blood:
+		stx _coinOrBlood
 		ldx #0 // Clear token
 		stx _tokenType
 		ldx _tokenRow
@@ -63,6 +65,7 @@ SpawnBloodOrCoin:
 		SprSetHandler(SPR_BloodOrCoin, MoveBloodOrCoin)
 		rts
 	spawn_coin:
+		stx _coinOrBlood
 		ldx #0 // Clear token
 		stx _tokenType
 		ldx _tokenRow
