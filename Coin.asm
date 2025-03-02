@@ -3,17 +3,19 @@ _tokenType: .byte 0
 _tokenRow: .byte 0
 
 _openDoor: .byte 0
-_coinOrBlood: .byte
+_spawnedToken: .byte 0
 
 _coinY: .fill 20, VIS_TOP + i*8-7
 _bloodY: .fill 20, VIS_TOP + i*8+2
 _doorY: .fill 20, VIS_TOP + i*8-3
 _switchY: .fill 20, VIS_TOP + i*8-12
+_exLifeY: .fill 20, VIS_TOP + i*8-12
 
 .const TOKEN_BLOOD = $79
 .const TOKEN_COIN = $49
 .const TOKEN_DOOR = $3D
 .const TOKEN_SWITCH = $29
+.const TOKEN_EXLIFE = $6D
 
 TokenScan:
 {
@@ -30,6 +32,8 @@ TokenScan:
 		beq found
 		cmp #TOKEN_BLOOD
 		beq found
+		cmp #TOKEN_EXLIFE
+		beq found
 		cmp #TOKEN_DOOR
 		beq found
 		cmp #TOKEN_SWITCH
@@ -44,56 +48,78 @@ TokenScan:
 		rts
 }
 
-SpawnBloodOrCoin:
+SpawnToken:
 {
-		ldx _tokenType
+	ldx _tokenType
+	cpx #0
+	bne !next+
+	rts
+	!next:
+	cpx #TOKEN_SWITCH
+	bne !next+
+	rts
+	!next:
+	cpx #TOKEN_DOOR
+	bne !next+
+	rts
+	!next:
+		stx _spawnedToken
+		lda #0 // Clear token
+		sta _tokenType
+		lda #VIS_RIGHT
+		SprSTA(SPR_X)
+		SprSetHandler(SPR_SpawnedToken, MoveSpawnedToken)
+
 		cpx #TOKEN_BLOOD
-		beq spawn_blood
-		cpx #TOKEN_COIN
-		beq spawn_coin
-		rts
-	spawn_blood:
-		stx _coinOrBlood
-		ldx #0 // Clear token
-		stx _tokenType
+		bne !next+
+
+		SprSetAnimation(_sprAnimBloodSpin, 0)
 		ldx _tokenRow
 		lda _bloodY,x
 		SprSTA(SPR_Y)
-		lda #VIS_RIGHT
-		SprSTA(SPR_X)
-		SprSetAnimation(_sprAnimBloodSpin, 0)
-		SprSetHandler(SPR_BloodOrCoin, MoveBloodOrCoin)
 		rts
-	spawn_coin:
-		stx _coinOrBlood
-		ldx #0 // Clear token
-		stx _tokenType
+	!next:
+		cpx #TOKEN_COIN
+		bne !next+
+
+		SprSetAnimation(_sprAnimCoinSpin, 0)
 		ldx _tokenRow
 		lda _coinY,x
 		SprSTA(SPR_Y)
-		lda #VIS_RIGHT
-		SprSTA(SPR_X)
-		SprSetAnimation(_sprAnimCoinSpin, 0)
-		SprSetHandler(SPR_BloodOrCoin, MoveBloodOrCoin)
+		rts
+	!next:
+		cpx #TOKEN_EXLIFE
+		bne !next+
+
+		SprSetAnimation(_sprAnimExLife, 0)
+		ldx _tokenRow
+		lda _exLifeY,x
+		SprSTA(SPR_Y)
+	!next:
 		rts
 }
 
-MoveBloodOrCoin:
+MoveSpawnedToken:
 {
-		SprSBC(SPR_X, 1)
-		cmp #$f0
-		bcc on_screen
+		lda _mapScrollEnabled
+		beq on_screen
+
+			SprSBC(SPR_X, 1)
+			cmp #$f0
+			bcc on_screen
+
+		no_move:
 
 		SprSetAnimation(_sprAnimEmpty, 0)
-		SprSetHandler(SPR_BloodOrCoin, SpawnBloodOrCoin)
+		SprSetHandler(SPR_SpawnedToken, SpawnToken)
 	on_screen:
 		rts
 }
 
-PickBloodOrCoin:
+PickSpawnedToken:
 {
 		SprSetAnimation(_sprAnimEmpty, 0)
-		SprSetHandler(SPR_BloodOrCoin, SpawnBloodOrCoin)
+		SprSetHandler(SPR_SpawnedToken, SpawnToken)
 		rts
 }
 
@@ -117,9 +143,12 @@ SpawnSwitch:
 
 MoveSwitch:
 {
-		SprSBC(SPR_X, 1)
-		cmp #$f0
-		bcc on_screen
+		lda _mapScrollEnabled
+		beq on_screen
+			SprSBC(SPR_X, 1)
+			cmp #$f0
+			bcc on_screen
+		no_move:
 
 		SprSetAnimation(_sprAnimEmpty, 0)
 		SprSetHandler(SPR_Switch, SpawnSwitch)
@@ -159,9 +188,12 @@ SpawnDoor:
 
 MoveClosedDoor:
 {
-		SprSBC(SPR_X, 1)
-		cmp #$f0
-		bcc on_screen
+		lda _mapScrollEnabled
+		beq on_screen
+			SprSBC(SPR_X, 1)
+			cmp #$f0
+			bcc on_screen
+		no_move:
 
 		SprSetAnimation(_sprAnimEmpty, 0)
 		SprSetHandler(SPR_Door, SpawnDoor)
@@ -184,9 +216,12 @@ MoveClosedDoor:
 
 MoveOpenDoor:
 {
-		SprSBC(SPR_X, 1)
-		cmp #$f0
-		bcc on_screen
+		lda _mapScrollEnabled
+		beq on_screen
+			SprSBC(SPR_X, 1)
+			cmp #$f0
+			bcc on_screen
+		no_move:
 
 		SprSetAnimation(_sprAnimEmpty, 0)
 		SprSetHandler(SPR_Door, SpawnDoor)

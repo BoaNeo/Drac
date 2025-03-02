@@ -1,5 +1,6 @@
 .const CHAR_COLLISION_MASK = $f0
 .const BAT_TIME = $20
+.const NEXT_LEVEL_CHAR = $5D
 
 _batTimer: .byte 0 
 _playerDie: .byte 0
@@ -37,6 +38,17 @@ PlyRun:
 		bne dead
 
 		SprLDA(SPR_CharAt)
+		cmp #NEXT_LEVEL_CHAR
+		bne no_new_level
+
+			// TODO: Init next map
+
+			lda #1
+			sta _mapScrollEnabled
+
+		no_new_level:		
+
+		SprLDA(SPR_CharAt)
 		and #CHAR_COLLISION_MASK
 		bne alive
 
@@ -55,6 +67,14 @@ PlyRun:
 		rts
 
 	up:
+		lda _mapScrollEnabled
+		bne should_animate
+		lda $dc00
+		eor #%01100
+		and #%01100
+		bne should_animate
+		SprSetAnimation(_sprAnimDracRun, 0)
+	should_animate:
 		lda $dc00
 		ror
 		bcs down
@@ -289,13 +309,15 @@ PlyEOA_Spawn:
 
 PlyEOA_Death:
 {
-		dec _lifes
+//		dec _lifes
 		lda _lifes
 		beq game_over
-
-game_over:		
 		SprSetAnimation(_sprAnimDracAppear, 0)
 		SprSetHandler(SPR_Player,PlySpawn)
+		rts
+game_over:		
+		SprSetAnimation(_sprAnimEmpty, 0)
+		SprSetHandler(SPR_Player, 0)
 		rts
 }
 

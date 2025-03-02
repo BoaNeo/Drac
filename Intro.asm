@@ -2,11 +2,16 @@
 
 IntroInit:
 {
+		IRQ_SetNext($30, IntroIRQ1)
+
 		SetBorderColor(BLACK)
 		SetScreenColor(BLACK)
 
 		lda #%11001000 // Turn on multicolor mode
 		sta $d016
+	    lda $d011
+	    ora #%00001000 // Switch to 25 rows
+	    sta $d011
 
 		lda #FONT_BITS
 		sta _fontBits
@@ -23,8 +28,6 @@ IntroInit:
 		jsr ClearColorRam
 
 		SwapToBuffer1()
-
-		IRQ_SetNext($30, IntroIRQ1)
 
 wait:	lda $dc00
 		and #%10000
@@ -172,35 +175,52 @@ _textIntro:
 .byte RED,16,8
 .text "DRAC"
 .byte 0
-.byte YELLOW,11,23
-.text "PRESS FIRE"
+.byte YELLOW,8,23
+.text "press FIRE to start."
 .byte 0
 .byte $ff
 
+///////----------++++++++++----------++++++++++
+
 _textHelp:
-.byte GREEN,9,1
-.text "INSTRUCTIONS"
+.byte YELLOW,2,1
+.text "Help DRAC collect "
+.byte ('Z'+6)
+.text " gold coins"
 .byte 0
-.byte RED,8,6
-.text "UP"
+.byte YELLOW,0,2
+.text "in tax from every village in the county."
 .byte 0
-.byte GREEN,19,6
-.text "Vanish Up"
+
+.byte YELLOW,0,5
+.text "Tax must be collected before the sunset"
 .byte 0
-.byte RED,8,9
-.text "DOWN"
+.byte YELLOW,7,6
+.text "so speed is of the essence."
 .byte 0
-.byte GREEN,19,9
-.text "Vanish Down"
+
+.byte YELLOW,2,9
+.text "Be aware of closed doors, walls and"
 .byte 0
-.byte RED,8,12
+.byte YELLOW,12,10
+.text "other obstacles."
+.byte 0
+
+.byte YELLOW,7,13
+.text "Consume blood to teleport"
+.byte 0
+.byte YELLOW,4,14
+.text "to higher or lower ground using:"
+.byte 0
+.byte GREEN,1,17
+.text "FIRE + UP or FIRE + DOWN"
+.byte 0
+
+.byte YELLOW,1,20
+.text "To fly across short distances, press:"
+.byte 0
+.byte GREEN,16,23
 .text "FIRE"
-.byte 0
-.byte GREEN,19,12
-.text "Bat Mode"
-.byte 0
-.byte YELLOW,11,23
-.text "PRESS FIRE"
 .byte 0
 .byte $ff
 
@@ -208,19 +228,19 @@ _textHighScore:
 .byte GREEN,11,1
 .text "HIGH SCORE"
 .byte 0
-.byte RED,11,6
+.byte CYAN,11,6
 .text "1. TOX"
 .byte 0
 .byte GREEN,23,6
 .text "123456"
 .byte 0
-.byte RED,11,9
+.byte CYAN,11,9
 .text "2. TOX"
 .byte 0
 .byte GREEN,23,9
 .text "123456"
 .byte 0
-.byte RED,11,12
+.byte CYAN,11,12
 .text "3. TOX"
 .byte 0
 .byte GREEN,23,12

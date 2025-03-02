@@ -1,3 +1,4 @@
+.const REQUIRED_COINS = 2
 
 _animDelay: .byte 0
 _shouldDrawMap: .byte 0
@@ -23,7 +24,8 @@ _textHUD:
 
 .byte YELLOW,15,22
 .text "coins: "
-.text "0/5"
+.text "0/"
+.byte ('0'+REQUIRED_COINS)
 .byte 0
 
 .byte RED,16,23
@@ -50,9 +52,22 @@ _textLevelComplete:
 _textGoToTheExit:
 .text "go to the exit"
 .byte 0
+_textExitRight:
+.text "  exit right  "
+.byte 0
+_textToContinue:
+.text " to continue! "
+.byte 0
+_textGame:
+.text "  game  over  "
+.byte 0
+_textOver:
+.text "  press fire  "
+.byte 0
+
 
 .const SPR_Player = 0
-.const SPR_BloodOrCoin = 1
+.const SPR_SpawnedToken = 1
 .const SPR_Door = 2
 .const SPR_Switch = 3
 
@@ -75,7 +90,7 @@ GameInit:
 	jsr DrawScreen
 	jsr ApplyColorBuffer1
 
-	lda #3
+	lda #2
 	sta _lifes
 	lda #3
 	sta _blood
@@ -84,14 +99,22 @@ GameInit:
 
 	SwapToBuffer1()
 
+	lda #<_map1
+	sta $fc
+	lda #>_map1
+	sta $fd
+	lda _map1Width
+	sta $fb
+	jsr InitMap
+
     SprManagerInit($c0,$ff,OnSprCollision)
 
     SprSetHandler(SPR_Player, PlySpawn)
-    SprSetHandler(SPR_BloodOrCoin, SpawnBloodOrCoin)
+    SprSetHandler(SPR_SpawnedToken, SpawnToken)
     SprSetHandler(SPR_Door, SpawnDoor)
     SprSetHandler(SPR_Switch, SpawnSwitch)
 
-    ExSprSetFlags(SPR_BloodOrCoin, SPRBIT_IsCollider)
+    ExSprSetFlags(SPR_SpawnedToken, SPRBIT_IsCollider)
     ExSprSetFlags(SPR_Switch, SPRBIT_IsCollider)
     ExSprSetFlags(SPR_Door, SPRBIT_IsCollider | SPRBIT_ExtendY)
 
@@ -108,17 +131,42 @@ GameInit:
 	//	SetBorderColor(BLACK)
 	    lda #$0
 		sta _shouldDrawMap
-	    jmp wait
+		lda _lifes
+		bne wait
+		lda $dc00
+		and #%10000
+		bne wait
+		release:
+		lda $dc00
+		and #%10000
+		beq release
+		rts
 }
 
 UpdateHUD:
 {
 	lda _coins
-	cmp #1 
-	bcc show_coins
+	cmp #REQUIRED_COINS 
+	bcs level_completed
+	ldx _lifes
+	beq game_over
+	jmp show_coins
+	game_over:
+		DRAW_TEXT(_textGame, 13, 23, _colorBlinkGreen)
+		DRAW_TEXT(_textOver, 13, 24, _colorBlinkYellow)
+		lda #0
+		sta _mapScrollEnabled
+		jmp bars	
+	level_completed:
+		lda _mapScrollEnabled
+		beq end_reached
 		DRAW_TEXT(_textLevelComplete, 13, 23, _colorBlinkGreen)
 		DRAW_TEXT(_textGoToTheExit, 13, 24, _colorBlinkYellow)
 		jmp bars
+		end_reached:
+			DRAW_TEXT(_textExitRight, 13, 23, _colorBlinkGreen)
+			DRAW_TEXT(_textToContinue, 13, 24, _colorBlinkYellow)
+			jmp bars
 	show_coins:
 		clc
 		adc #'0'
@@ -347,18 +395,38 @@ OnSprCollision:
 
 	check_ply_collision:
 		lda $f2
-		cmp #SPR_BloodOrCoin
+		cmp #SPR_SpawnedToken
 		bne !next+
 
-			SprSetHandler(SPR_BloodOrCoin, PickBloodOrCoin)
+			SprSetHandler(SPR_SpawnedToken, PickSpawnedToken)
 
-			lda _coinOrBlood
+			lda _spawnedToken
 			cmp #TOKEN_BLOOD
 			beq !blood+
+				cmp #TOKEN_COIN
+				beq !coin+
+				lda _lifes
+				cmp #3
+				bcs !full+
+				inc _lifes
+			!full:
+				rts
+			!coin:
 				lda _coins
-				cmp #5
+				cmp #REQUIRED_COINS
 				bcs !done+
 					inc _coins
+					lda _coins
+					cmp #REQUIRED_COINS
+					bcc !done+
+						// Extend the map so it shows the end-screen
+						lda _mapWidth
+						clc
+						adc #10
+						sta _mapWidth
+						// And disable map looping
+						lda #0
+						sta _mapScrollLooped
 			!done:
 				rts
 			!blood:

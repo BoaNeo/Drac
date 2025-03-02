@@ -1,7 +1,43 @@
+
+_drawers: .word DrawMap0-1, DrawMap1-1, DrawMap2-1, DrawMap3-1, DrawMap4-1, DrawMap5-1, DrawMap6-1, DrawMap7-1
+_mapScrollEnabled: .byte 0
+_mapScrollLooped: .byte 0
+_drawMapPass: .byte 0
+_tileOffset: .byte 0
+_tileIndex: .byte 0
+_mapWidth: .byte 0
+
 //------------------------------------------------------------
+// ($fc) -> Map address
+// $fb -> Map Width
+InitMap:
+{
+	lda $fb
+	sta _mapWidth
+	lda #<_mapEnd
+	sta $fe
+	lda #>_mapEnd
+	sta $ff
+
+	INIT_ROW(_activeMapRow0)
+	INIT_ROW(_activeMapRow1)
+	INIT_ROW(_activeMapRow2)
+	INIT_ROW(_activeMapRow3)
+	INIT_ROW(_activeMapRow4)
+
+	lda #0
+	sta _tileIndex
+	lda #1
+	sta _mapScrollEnabled
+	sta _mapScrollLooped
+	rts
+}
 
 DrawMap:
 {
+	lda _mapScrollEnabled
+	beq noscroll
+
 	ldx _drawMapPass
     lda _drawers+1,x
     pha
@@ -13,7 +49,8 @@ DrawMap:
     bne exit
     ldx #0
 	exit:
-    stx _drawMapPass
+	    stx _drawMapPass
+    noscroll:
     rts
 }
 
@@ -36,11 +73,11 @@ DrawMap2:
 DrawMap3:
 	ScrollX(0,GFX6_BITS)
 	ShiftBuffers(_screen1, _screen2, _color1, _color2, 14, 6)
-	FillEdge(_map0, 0, _screen2, _color2)
-	FillEdge(_map1, 4, _screen2, _color2)
-	FillEdge(_map2, 8, _screen2, _color2)
-	FillEdge(_map3, 12, _screen2, _color2)
-	FillEdge(_map4, 16, _screen2, _color2)
+	FillEdge(_activeMapRow0, 0, _screen2, _color2)
+	FillEdge(_activeMapRow1, 4, _screen2, _color2)
+	FillEdge(_activeMapRow2, 8, _screen2, _color2)
+	FillEdge(_activeMapRow3, 12, _screen2, _color2)
+	FillEdge(_activeMapRow4, 16, _screen2, _color2)
 	jsr TokenScan
 	jmp NextColumn
 
@@ -63,13 +100,44 @@ DrawMap6:
 DrawMap7:
 	ScrollX(0,GFX6_BITS)
 	ShiftBuffers(_screen2, _screen1, _color2, _color1, 14, 6)
-	FillEdge(_map0, 0, _screen1, _color1)
-	FillEdge(_map1, 4, _screen1, _color1)
-	FillEdge(_map2, 8, _screen1, _color1)
-	FillEdge(_map3, 12, _screen1, _color1)
-	FillEdge(_map4, 16, _screen1, _color1)
+	FillEdge(_activeMapRow0, 0, _screen1, _color1)
+	FillEdge(_activeMapRow1, 4, _screen1, _color1)
+	FillEdge(_activeMapRow2, 8, _screen1, _color1)
+	FillEdge(_activeMapRow3, 12, _screen1, _color1)
+	FillEdge(_activeMapRow4, 16, _screen1, _color1)
 	jsr TokenScan
 	jmp NextColumn
+
+.macro INIT_ROW(row)
+{
+	ldy $fb
+	dey
+	!copy:
+		lda ($fc),y
+		sta row,y
+		dey
+		bpl !copy-
+	ldx $fb
+	ldy #0
+	!copy:
+		lda ($fe),y
+		sta row,x
+		inx
+		iny
+		cpy _mapEndWidth
+		bne !copy-
+	lda $fe
+	clc
+	adc _mapEndWidth
+	sta $fe
+	lda $fc
+	clc
+	adc $fb
+	sta $fc	
+	bcc nohi
+		inc $fd
+	nohi:
+}
 
 .macro ScrollX(amount, font_bits)
 {
@@ -161,15 +229,21 @@ NextColumn:
 	cmp #$10
 	bne exit
 
-	lda #$0
-	sta _tileOffset
-	inc _tileIndex
+		lda #$0
+		sta _tileOffset
 
+		inc _tileIndex
+		lda _tileIndex
+		cmp _mapWidth
+		bne exit
+			lda _mapScrollLooped
+			bne loop
+			lda #0
+			sta _mapScrollEnabled
+			loop:
+			lda #0
+			sta _tileIndex
 	exit:
 	rts
 
-_drawers: .word DrawMap0-1, DrawMap1-1, DrawMap2-1, DrawMap3-1, DrawMap4-1, DrawMap5-1, DrawMap6-1, DrawMap7-1
-_drawMapPass: .byte 0
-_tileOffset: .byte 0
-_tileIndex: .byte 0
 

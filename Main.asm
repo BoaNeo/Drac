@@ -10,23 +10,24 @@ BasicUpstart2(Start)
 #import "Sprites.asm"
 
 * = * "Sprite Animations"
-_sprAnimEmpty: 		.import binary "data/Sprites_empty.anim"
+_sprAnimEmpty: 			.import binary "data/Sprites_empty.anim"
 
-_sprAnimDracRun: 	.import binary "data/Sprites_run.anim"
-_sprAnimDracDie: 	.import binary "data/Sprites_death.anim"
+_sprAnimDracRun: 		.import binary "data/Sprites_run.anim"
+_sprAnimDracDie: 		.import binary "data/Sprites_death.anim"
 _sprAnimDracVanish: 	.import binary "data/Sprites_vanish.anim"
 _sprAnimDracAppear: 	.import binary "data/Sprites_appear.anim"
 _sprAnimDracFalling: 	.import binary "data/Sprites_falling.anim"
-_sprAnimDracToBat: 	.import binary "data/Sprites_tobat.anim"
-_sprAnimDracBat: 	.import binary "data/Sprites_bat.anim"
+_sprAnimDracToBat: 		.import binary "data/Sprites_tobat.anim"
+_sprAnimDracBat: 		.import binary "data/Sprites_bat.anim"
 _sprAnimDracFromBat: 	.import binary "data/Sprites_frombat.anim"
 
-_sprAnimCoinSpin: 	.import binary "data/Sprites_coinspin.anim"
-_sprAnimBloodSpin: 	.import binary "data/Sprites_bloodspawn.anim"
+_sprAnimCoinSpin: 		.import binary "data/Sprites_coinspin.anim"
+_sprAnimBloodSpin: 		.import binary "data/Sprites_bloodspawn.anim"
 _sprAnimDoorClosed: 	.import binary "data/Sprites_doorclosed.anim"
-_sprAnimDoorOpen: 	.import binary "data/Sprites_dooropen.anim"
-_sprAnimSwitchOff: 	.import binary "data/Sprites_switchoff.anim"
-_sprAnimSwitchOn: 	.import binary "data/Sprites_switchon.anim"
+_sprAnimDoorOpen: 		.import binary "data/Sprites_dooropen.anim"
+_sprAnimSwitchOff: 		.import binary "data/Sprites_switchoff.anim"
+_sprAnimSwitchOn: 		.import binary "data/Sprites_switchon.anim"
+_sprAnimExLife: 		.import binary "data/Sprites_exlife.anim"
 
 *=$2000 "Font Tile Ptrs"
 _fontTilePtr:
@@ -49,6 +50,13 @@ _tiles:
 _tileColors:
 .var tile_colors = LoadBinary("data/Foreground.cmap");
 .fill tile_colors.getSize(), tile_colors.get( (i&$fff0) + ((i>>2)&$03) + ((i&$03)<<2) );
+
+*=$2d80
+_activeMapRow0: .fill 128, 0
+_activeMapRow1: .fill 128, 0
+_activeMapRow2: .fill 128, 0
+_activeMapRow3: .fill 128, 0
+_activeMapRow4: .fill 128, 0
 
 *=$3000 "Color Buffer 1" virtual 
 _color1:
@@ -102,14 +110,19 @@ _gfx4:
 _spriteGfx:
 .import binary "data/Sprites.spr"
 
-*=$a000 "Map 1"
-.var map = LoadBinary("data/Map01.map");
-.var line = map.getSize()/5;
-_map0: .fill $100, map.get(0*line + mod(i,line));
-_map1: .fill $100, map.get(1*line + mod(i,line));
-_map2: .fill $100, map.get(2*line + mod(i,line));
-_map3: .fill $100, map.get(3*line + mod(i,line));
-_map4: .fill $100, map.get(4*line + mod(i,line));
+*=$b000 "Map End"
+.var mapEnd = LoadBinary("data/EndScreen.map");
+_mapEndWidth:
+.byte mapEnd.getSize()/5;
+_mapEnd:
+.fill mapEnd.getSize(), mapEnd.get(i);
+
+*=* "Map 1"
+.var map1 = LoadBinary("data/Map01.map");
+_map1Width:
+.byte map1.getSize()/5;
+_map1:
+.fill map1.getSize(), map1.get(i);
 
 //----------------------------------------------------------
 //----------------------------------------------------------
@@ -119,13 +132,19 @@ _map4: .fill $100, map.get(4*line + mod(i,line));
 
 * = $8000 "Main Program"
 
+Start:
+  	// Make $A000 - $BFFF visible, without removing the kernel ($e000-$ffff)
+    lda #%00110110
+    sta $01
+    jmp Setup
+
 #import "IRQ.asm"
 #import "Screen.asm"
 #import "Intro.asm"
 #import "Game.asm"
 #import "SideScrollerFixedParallax_v2.asm"
 
-Start:
+Setup:
 	lda #$10
 	sta $ff
 	wait_raster:
@@ -136,11 +155,7 @@ Start:
 	dec $ff
 	bne wait_raster
 
-	jsr IRQ_Init
-      
-  	// Make $A000 - $BFFF visible, without removing the kernel ($e000-$ffff)
-    lda #%00110110
-    sta $01
+	jsr IRQ_Init      
 
 	lda $dd00
 	and #%11111100

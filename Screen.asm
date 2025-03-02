@@ -63,29 +63,37 @@ ApplyColorBuffer2:
 
 DrawScreen:
 {
-	ldy #$ff
-next:
-	iny
-	lda ($fa),y
-	cmp #$ff
-	beq exit
-	sta $fc
-	iny
-	lda ($fa),y
-	sta $20
-	iny
-	lda ($fa),y
-	sta $21
-loop:
-	iny
-	sty $23
-	lda ($fa),y
-	beq next
-	jsr DrawChar
-	ldy $23
-	jmp loop
-exit:
-	rts
+	next_line:
+		ldy #$00
+		lda ($fa),y
+		cmp #$ff
+		beq exit
+		sta $fc
+		iny
+		lda ($fa),y
+		sta $20
+		iny
+		lda ($fa),y
+		sta $21
+	loop:
+		iny
+		sty $23
+		lda ($fa),y
+		bne next_char
+			iny
+			tya
+			clc
+			adc $fa
+			sta $fa
+			bcc next_line
+			inc $fb
+			jmp next_line
+	next_char:
+		jsr DrawChar
+		ldy $23
+		jmp loop
+	exit:
+		rts
 }
 
 .macro ClearScreen(screen, v)
