@@ -309,7 +309,7 @@ PlyEOA_Spawn:
 
 PlyEOA_Death:
 {
-//		dec _lifes
+		dec _lifes
 		lda _lifes
 		beq game_over
 		SprSetAnimation(_sprAnimDracAppear, 0)

@@ -1,5 +1,6 @@
 .const REQUIRED_COINS = 2
 
+_tick: .byte 0
 _animDelay: .byte 0
 _shouldDrawMap: .byte 0
 _textHUD:
@@ -28,8 +29,8 @@ _textHUD:
 .byte ('0'+REQUIRED_COINS)
 .byte 0
 
-.byte RED,16,23
-.text "00:00:21"
+.byte RED,14,23
+.text "sunset 00:00"
 .byte 0
 
 .byte 8+RED,29,23
@@ -90,12 +91,20 @@ GameInit:
 	jsr DrawScreen
 	jsr ApplyColorBuffer1
 
-	lda #2
+	lda #3
 	sta _lifes
 	lda #3
 	sta _blood
 	lda #0
 	sta _coins
+	lda #1
+	sta _tick
+	lda #'2'
+	sta _screen1+24*40+22
+	lda #'3'
+	sta _screen1+24*40+24
+	lda #'0'
+	sta _screen1+24*40+25
 
 	SwapToBuffer1()
 
@@ -136,7 +145,7 @@ GameInit:
 		lda $dc00
 		and #%10000
 		bne wait
-		release:
+	release:
 		lda $dc00
 		and #%10000
 		beq release
@@ -149,6 +158,12 @@ UpdateHUD:
 	cmp #REQUIRED_COINS 
 	bcs level_completed
 	ldx _lifes
+	beq game_over
+	lda _screen1+24*40+25
+	ora _screen1+24*40+24
+	ora _screen1+24*40+22
+	ora _screen1+24*40+21
+	cmp #'0'
 	beq game_over
 	jmp show_coins
 	game_over:
@@ -168,13 +183,43 @@ UpdateHUD:
 			DRAW_TEXT(_textToContinue, 13, 24, _colorBlinkYellow)
 			jmp bars
 	show_coins:
+		lda _coins
 		clc
 		adc #'0'
 		sta _screen1+22+23*40
+
+		jsr ClockTick
 	bars:
 		FILL_BAR(_blood, _bloodBar, 5, 23)
 		FILL_BAR(_lifes, _lifeBar, 29,23)
 		rts
+}
+
+ClockTick:
+{
+		dec _tick
+		beq tick_now
+		rts
+	tick_now:
+		lda #55
+		sta _tick
+
+		DEC_DIGIT(25,24)
+		DEC_DIGIT(24,24)
+		DEC_DIGIT(22,24)
+		DEC_DIGIT(21,24)
+		rts
+}
+.macro DEC_DIGIT(x,y)
+{
+		lda _screen1+y*40+x
+		cmp #'0'
+		beq wrap
+		dec _screen1+y*40+x
+		rts
+	wrap:
+		lda #'9'
+		sta _screen1+y*40+x	
 }
 
 _blink:
