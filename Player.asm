@@ -41,10 +41,8 @@ PlyRun:
 		cmp #NEXT_LEVEL_CHAR
 		bne no_new_level
 
-			// TODO: Init next map
-
-			lda #1
-			sta _mapScrollEnabled
+		inc _mapIndex
+		jsr InitMap
 
 		no_new_level:		
 

@@ -12,6 +12,8 @@ IntroInit:
 	    lda $d011
 	    ora #%00001000 // Switch to 25 rows
 	    sta $d011
+	    lda #$00
+	    sta $d015
 
 		lda #FONT_BITS
 		sta _fontBits
@@ -59,9 +61,33 @@ IntroIRQ1:
 
 		ldx _timer
 		beq fade
+		bmi wait_for_input
 		dex
 		stx _timer
+	no_input:
 		rts
+	wait_for_input:
+		lda $dc00
+		ror
+		ror
+		ror
+		bcs right
+		inc _timer
+		lda _screenIndex
+		sec
+		sbc #1
+		and #3
+		sta _screenIndex
+		jmp fade
+	right:
+		ror
+		bcs no_input
+		inc _timer
+		lda _screenIndex
+		clc
+		adc #1
+		and #3
+		sta _screenIndex
 	fade:
 		ldy _startRow
 		cpy #25+COLOR_RAMP_SIZE // We've faded all 25 rows completely and we can start over
@@ -116,7 +142,7 @@ IntroIRQ1:
 		stx _startRow
 		lda _direction
 		bne up
-		ldx #180
+		ldx #$ff
 		stx _timer
 		lda #<_rampDown
 		sta ramp
@@ -134,15 +160,15 @@ IntroIRQ1:
 		dec _direction
 		ldx _screenIndex
 		lda _screensLo,x
-		bne set_screen
-		ldx #0
-		stx _screenIndex
-		lda _screensLo,x
-	set_screen:
+//		bne set_screen
+//		ldx #0
+//		stx _screenIndex
+//		lda _screensLo,x
+//	set_screen:
 		sta $fa
 		lda _screensHi,x
 		sta $fb
-		inc _screenIndex
+//		inc _screenIndex
 		jsr ClearScreen1
 		jmp DrawScreen
 
@@ -161,8 +187,8 @@ _rampDown: .byte WHITE, LIGHT_GREEN, YELLOW, LIGHT_GRAY, CYAN, LIGHT_RED, GREEN,
 _rampUp: .byte BLACK, BLUE, BROWN, RED, DARK_GRAY, PURPLE, ORANGE, LIGHT_BLUE, GRAY, GREEN, LIGHT_RED, CYAN, LIGHT_GRAY, YELLOW, LIGHT_GREEN, WHITE
 
 //_rampUp: .byte BLUE, GREEN, BLUE, GREEN, GREEN, CYAN, GREEN, CYAN, CYAN, YELLOW, CYAN, YELLOW, YELLOW, WHITE, YELLOW, WHITE, RED
-_screensLo: .byte <_textIntro, <_textHelp, <_textHighScore, 0
-_screensHi: .byte >_textIntro, >_textHelp, >_textHighScore, 0
+_screensLo: .byte <_textIntro, <_textHelp, <_textHighScore, <_textAbout, 0
+_screensHi: .byte >_textIntro, >_textHelp, >_textHighScore, >_textAbout, 0
 }
 
 _textIntro:
@@ -174,6 +200,9 @@ _textIntro:
 .byte 0
 .byte RED,16,8
 .text "DRAC"
+.byte 0
+.byte YELLOW,2,20
+.text "pull LEFT or RIGHT for more"
 .byte 0
 .byte YELLOW,8,23
 .text "press FIRE to start."
@@ -249,4 +278,23 @@ _textHighScore:
 .byte YELLOW,11,23
 .text "PRESS FIRE"
 .byte 0
+.byte $ff
+
+_textAbout:
+.byte GREEN,16,1
+.text "DRAC"
+.byte 0
+.byte CYAN,15,6
+.text "written by"
+.byte 0
+.byte GREEN,5,9
+.text "NIELS  JORGENSEN"
+.byte 0
+.byte CYAN,18,11
+.text "2025"
+.byte 0
+.byte YELLOW,11,23
+.text "PRESS FIRE"
+.byte 0
+
 .byte $ff

@@ -6,13 +6,23 @@ _drawMapPass: .byte 0
 _tileOffset: .byte 0
 _tileIndex: .byte 0
 _mapWidth: .byte 0
+_mapIndex: .byte 0
 
 //------------------------------------------------------------
-// ($fc) -> Map address
-// $fb -> Map Width
 InitMap:
 {
-	lda $fb
+	ldx _mapIndex
+	cpx #MAP_COUNT
+	bcc index_ok
+	ldx #0
+	stx _mapIndex
+index_ok:
+	lda _mapsLo,x
+	sta $fc
+	lda _mapsHi,x
+	sta $fd
+	lda _mapWidths,x
+	sta $fb
 	sta _mapWidth
 	lda #<_mapEnd
 	sta $fe
@@ -32,6 +42,7 @@ InitMap:
 	sta _mapScrollLooped
 	rts
 }
+
 
 DrawMap:
 {

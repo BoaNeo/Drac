@@ -108,24 +108,21 @@ GameInit:
 
 	SwapToBuffer1()
 
-	lda #<_map1
-	sta $fc
-	lda #>_map1
-	sta $fd
-	lda _map1Width
-	sta $fb
+	lda #0
+	sta _mapIndex
 	jsr InitMap
 
     SprManagerInit($c0,$ff,OnSprCollision)
 
     SprSetHandler(SPR_Player, PlySpawn)
-    SprSetHandler(SPR_SpawnedToken, SpawnToken)
-    SprSetHandler(SPR_Door, SpawnDoor)
-    SprSetHandler(SPR_Switch, SpawnSwitch)
+    SprSetHandler(SPR_SpawnedToken, InitToken)
+    SprSetHandler(SPR_Door, InitDoor)
+    SprSetHandler(SPR_Switch, InitSwitch)
 
     ExSprSetFlags(SPR_SpawnedToken, SPRBIT_IsCollider)
     ExSprSetFlags(SPR_Switch, SPRBIT_IsCollider)
     ExSprSetFlags(SPR_Door, SPRBIT_IsCollider | SPRBIT_ExtendY)
+
 
 	IRQ_SetNext($d1, GameIRQ1)
 
@@ -154,9 +151,6 @@ GameInit:
 
 UpdateHUD:
 {
-	lda _coins
-	cmp #REQUIRED_COINS 
-	bcs level_completed
 	ldx _lifes
 	beq game_over
 	lda _screen1+24*40+25
@@ -165,6 +159,9 @@ UpdateHUD:
 	ora _screen1+24*40+21
 	cmp #'0'
 	beq game_over
+	lda _coins
+	cmp #REQUIRED_COINS 
+	bcs level_completed
 	jmp show_coins
 	game_over:
 		DRAW_TEXT(_textGame, 13, 23, _colorBlinkGreen)

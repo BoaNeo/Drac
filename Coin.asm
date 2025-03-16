@@ -48,6 +48,13 @@ TokenScan:
 		rts
 }
 
+InitToken:
+{
+		SprSetAnimation(_sprAnimEmpty, 0)
+		SprSetHandler(SPR_SpawnedToken, SpawnToken)
+		rts
+}
+
 SpawnToken:
 {
 	ldx _tokenType
@@ -123,6 +130,13 @@ PickSpawnedToken:
 		rts
 }
 
+InitSwitch:
+{
+		SprSetAnimation(_sprAnimEmpty, 0)
+		SprSetHandler(SPR_Switch, SpawnSwitch)
+		rts
+}
+
 SpawnSwitch:
 {
 		ldx _tokenType
@@ -164,6 +178,13 @@ FlipSwitch:
 		rts
 }
 
+
+InitDoor:
+{
+		SprSetAnimation(_sprAnimEmpty, 0)
+		SprSetHandler(SPR_Door, SpawnDoor)
+		rts
+}
 
 SpawnDoor:
 {

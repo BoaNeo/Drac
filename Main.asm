@@ -117,12 +117,21 @@ _mapEndWidth:
 _mapEnd:
 .fill mapEnd.getSize(), mapEnd.get(i);
 
+.const MAP_COUNT = 2
+
 *=* "Map 1"
 .var map1 = LoadBinary("data/Map01.map");
-_map1Width:
-.byte map1.getSize()/5;
 _map1:
 .fill map1.getSize(), map1.get(i);
+
+*=* "Map 2"
+.var map2 = LoadBinary("data/Map02.map");
+_map2:
+.fill map2.getSize(), map2.get(i);
+
+_mapsLo: .byte <_map1, <_map2
+_mapsHi: .byte >_map1, >_map2
+_mapWidths: .byte map1.getSize()/5, map2.getSize()/5;
 
 //----------------------------------------------------------
 //----------------------------------------------------------
