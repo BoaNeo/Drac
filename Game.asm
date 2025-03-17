@@ -16,7 +16,7 @@ _textHUD:
 .byte BLACK,16,20
 .text "DRAC"
 .byte 0
-
+/*
 .byte 8+RED,5,23
 .byte 'Z'+21
 .byte 'Z'+21
@@ -38,7 +38,7 @@ _textHUD:
 .byte 'Z'+22
 .byte 'Z'+22
 .byte 0
-
+*/
 .byte $ff
 
 _bloodBar:
@@ -65,6 +65,15 @@ _textGame:
 _textOver:
 .text "  press fire  "
 .byte 0
+_textCoins:
+.text "  coins: 0/"
+.byte ('0'+REQUIRED_COINS)
+.text "  "
+.byte 0
+_textSunset:
+.text " sunset 00:00 "
+.byte 0
+
 
 
 .const SPR_Player = 0
@@ -95,22 +104,13 @@ GameInit:
 	sta _lifes
 	lda #3
 	sta _blood
-	lda #0
-	sta _coins
-	lda #1
-	sta _tick
-	lda #'2'
-	sta _screen1+24*40+22
-	lda #'3'
-	sta _screen1+24*40+24
-	lda #'0'
-	sta _screen1+24*40+25
 
 	SwapToBuffer1()
 
 	lda #0
 	sta _mapIndex
-	jsr InitMap
+
+	jsr GameStartRun
 
     SprManagerInit($c0,$ff,OnSprCollision)
 
@@ -149,6 +149,25 @@ GameInit:
 		rts
 }
 
+GameStartRun:
+{
+	lda #0
+	sta _coins
+	lda #1
+	sta _tick
+	lda #'2'
+	sta _textSunset+9
+	lda #'3'
+	sta _textSunset+11
+	lda #'0'
+	sta _textSunset+12
+	lda #1
+	sta _mapScrollEnabled
+	sta _mapScrollLooped
+	jsr InitMap
+	rts
+}
+
 UpdateHUD:
 {
 	ldx _lifes
@@ -183,7 +202,10 @@ UpdateHUD:
 		lda _coins
 		clc
 		adc #'0'
-		sta _screen1+22+23*40
+		sta _textCoins+9
+
+		DRAW_TEXT(_textCoins, 13, 23, _colorBlinkGreen)
+		DRAW_TEXT(_textSunset, 13, 24, _colorBlinkYellow)
 
 		jsr ClockTick
 	bars:
@@ -201,22 +223,22 @@ ClockTick:
 		lda #55
 		sta _tick
 
-		DEC_DIGIT(25,24)
-		DEC_DIGIT(24,24)
-		DEC_DIGIT(22,24)
-		DEC_DIGIT(21,24)
+		DEC_DIGIT(12)
+		DEC_DIGIT(11)
+		DEC_DIGIT(9)
+		DEC_DIGIT(8)
 		rts
 }
-.macro DEC_DIGIT(x,y)
+.macro DEC_DIGIT(x)
 {
-		lda _screen1+y*40+x
+		lda _textSunset+x
 		cmp #'0'
 		beq wrap
-		dec _screen1+y*40+x
+		dec _textSunset+x
 		rts
 	wrap:
 		lda #'9'
-		sta _screen1+y*40+x	
+		sta _textSunset+x
 }
 
 _blink:

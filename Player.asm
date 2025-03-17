@@ -41,10 +41,13 @@ PlyRun:
 		cmp #NEXT_LEVEL_CHAR
 		bne no_new_level
 
-		inc _mapIndex
-		jsr InitMap
+		lda _mapScrollEnabled
+		bne no_new_level // Already started new level, so skip it
 
-		no_new_level:		
+		inc _mapIndex
+		jsr GameStartRun
+
+	no_new_level:		
 
 		SprLDA(SPR_CharAt)
 		and #CHAR_COLLISION_MASK
@@ -58,24 +61,26 @@ PlyRun:
 	alive:
 		SprLDA(SPR_CharBelow)
 		and #CHAR_COLLISION_MASK // First 16 characters are "ground"
-		beq up
+		beq check_up
 
 		SprSetAnimation(_sprAnimDracFalling, 0)
 		SprSetHandler(SPR_Player,PlyFalling)
 		rts
 
-	up:
+	check_up:
+		lda $dc00
+		tax
 		lda _mapScrollEnabled
 		bne should_animate
-		lda $dc00
+		txa
 		eor #%01100
 		and #%01100
 		bne should_animate
-		SprSetAnimation(_sprAnimDracRun, 0)
+		SprSetAnimation(_sprAnimDracRun, 0) // If map is not scrolling, keep resetting animation unless actually moving left or right
 	should_animate:
-		lda $dc00
-		ror
-		bcs down
+		txa
+		and #%10001
+		bne check_down
 		lda _blood
 		bne !use_blood+
 		rts
@@ -85,9 +90,10 @@ PlyRun:
 		SprSetAnimation(_sprAnimDracVanish, PlyEOA_ReappearUp)
 		SprSetHandler(SPR_Player,PlyTeleportUp)
 		rts
-	down:
-		ror
-		bcs left
+	check_down:
+		txa
+		and #%10010
+		bne check_left
 		lda _blood
 		bne !use_blood+
 		rts
@@ -97,19 +103,22 @@ PlyRun:
 		SprSetAnimation(_sprAnimDracVanish, PlyEOA_ReappearDown)
 		SprSetHandler(SPR_Player,PlyTeleportDown)
 		rts
-	left:
-		ror
-		bcs right
+	check_left:
+		txa
+		and #%00100
+		bne check_right
 		PlyMoveLeft(2)
 		rts
-	right:
-		ror
-		bcs fire
+	check_right:
+		txa
+		and #%01000
+		bne check_fire
 		PlyMoveRight(1)
 		rts
-	fire:
-		ror
-		bcs no_fire
+	check_fire:
+		txa
+		and #%10000
+		bne no_fire
 		SprSetAnimation(_sprAnimDracToBat, PlyEOA_ToBat)
 		SprSetHandler(SPR_Player,PlyToBat)
 	no_fire:
@@ -147,19 +156,19 @@ PlyFalling:
 		PlyMoveDown(1)
 
 		lda $dc00
-		ror
-		ror
-		ror
-		bcs right
+		tax
+		and #%00100
+		bne check_right
 		PlyMoveLeft(1)
-		jmp fire
-	right:
-		ror
-		bcs fire
+		jmp check_fire
+	check_right:
+		txa
+		and #%01000
+		bne check_fire
 		PlyMoveRight(1)
-	fire:
-		lda $dc00
-		and #$10
+	check_fire:
+		txa
+		and #%10000
 		bne no_fire
 		SprSetAnimation(_sprAnimDracToBat, PlyEOA_ToBat)
 		SprSetHandler(SPR_Player,PlyToBat)
@@ -208,29 +217,30 @@ alive:
 		SprSetAnimation(_sprAnimDracFromBat, PlyEOA_FromBat)
 	control:
 		lda $dc00
-		ror
-		bcs down
+		tax
+		and #%00001
+		bne check_down
 		PlyMoveUp(1)
-		jmp leftright
-	down:
-		ror
-		bcs leftright
+		jmp check_left
+	check_down:
+		txa
+		and #%00010
+		bne check_left
 		PlyMoveDown(1)
-	leftright:
-		lda $dc00
-		ror
-		ror
-		ror
-		bcs right
+	check_left:
+		txa
+		and #%00100
+		bne check_right
 		PlyMoveLeft(2)
-		jmp fire
-	right:
-		ror
-		bcs fire
+		jmp check_fire
+	check_right:
+		txa
+		and #%01000
+		bne check_fire
 		PlyMoveRight(1)
-	fire:
-		lda $dc00
-		and #$10
+	check_fire:
+		txa
+		and #%10000
 		bne no_fire
 		SprSetAnimation(_sprAnimDracFromBat, PlyEOA_FromBat)
 	no_fire:

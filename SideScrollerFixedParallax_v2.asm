@@ -18,16 +18,16 @@ InitMap:
 	stx _mapIndex
 index_ok:
 	lda _mapsLo,x
-	sta $fc
+	sta $6c
 	lda _mapsHi,x
-	sta $fd
+	sta $6d
 	lda _mapWidths,x
-	sta $fb
+	sta $6b
 	sta _mapWidth
 	lda #<_mapEnd
-	sta $fe
+	sta $6e
 	lda #>_mapEnd
-	sta $ff
+	sta $6f
 
 	INIT_ROW(_activeMapRow0)
 	INIT_ROW(_activeMapRow1)
@@ -37,9 +37,6 @@ index_ok:
 
 	lda #0
 	sta _tileIndex
-	lda #1
-	sta _mapScrollEnabled
-	sta _mapScrollLooped
 	rts
 }
 
@@ -121,32 +118,32 @@ DrawMap7:
 
 .macro INIT_ROW(row)
 {
-	ldy $fb
+	ldy $6b
 	dey
 	!copy:
-		lda ($fc),y
+		lda ($6c),y
 		sta row,y
 		dey
 		bpl !copy-
-	ldx $fb
+	ldx $6b
 	ldy #0
 	!copy:
-		lda ($fe),y
+		lda ($6e),y
 		sta row,x
 		inx
 		iny
 		cpy _mapEndWidth
 		bne !copy-
-	lda $fe
+	lda $6e
 	clc
 	adc _mapEndWidth
-	sta $fe
-	lda $fc
+	sta $6e
+	lda $6c
 	clc
-	adc $fb
-	sta $fc	
+	adc $6b
+	sta $6c	
 	bcc nohi
-		inc $fd
+		inc $6d
 	nohi:
 }
 
