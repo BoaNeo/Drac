@@ -8,7 +8,9 @@ I got into programming back in 1986, at the age of 14-ish, and managed to teach 
 
 I also started numerous game projects, however, none of them were ever finished. Probably I could have used a few more books :)
 
-In an ettempt to rectify this, chasing an old childhood dream, and because I thought it would be fun to re-visit the old breadbox with accumulated knowledge and modern tools, I began writing DRAC sometime early 2025.
+In an attempt to rectify this, chasing an old childhood dream, and because I thought it would be fun to re-visit the old breadbox with accumulated knowledge and modern tools, I began writing DRAC sometime early 2025. 
+
+It's no rush, I work on it when I feel like it (which tends to be sunday afternoon for some reason :) ), and I suspect it will be mostly for my own enjoyment, but if anyone finds it useful, for fun, educational purposes or whatever, I'm more than happy to share it :)...
 
 ## What
 
